@@ -15,16 +15,16 @@ class UserTBManager(BaseUserManager):
       return user
 
     def create_superuser(self, email: str, password: str = None, **extra_fields) -> "UserTB":
-       
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
+      extra_fields.setdefault("is_staff", True)
+      extra_fields.setdefault("is_superuser", True)
+      extra_fields.setdefault("is_active", True)  # ✅ Allow superuser to log in
 
-        if not extra_fields.get("is_staff"):
-            raise ValueError("Superuser must have is_staff=True.")
-        if not extra_fields.get("is_superuser"):
-            raise ValueError("Superuser must have is_superuser=True.")
+      if not extra_fields.get("is_staff"):
+          raise ValueError("Superuser must have is_staff=True.")
+      if not extra_fields.get("is_superuser"):
+          raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(email, password, **extra_fields)
+      return self.create_user(email, password, **extra_fields)
 
 class UserTB(AbstractBaseUser, PermissionsMixin):
    

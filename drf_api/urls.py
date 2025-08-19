@@ -31,6 +31,16 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('api.urls')),
     path('sms/', include('smsparser.urls')),
+    path('api/', include('personal_details.urls')),
+    path('api/', include('work_experiences.urls')),
+    path('api/', include('career_objective.urls')),
+    path('api/', include('skills_app.urls')),
+    path('api/', include('education_app.urls')),
+    path('api/', include('language_app.urls')),
+    path('api/', include('project_app.urls')),
+    path('api/', include('certificate_app.urls')),
+    path('api/', include('references_app.urls')),
+    path('api/', include('achivements_app.urls')),
     # Swagger UI documentation
    #  path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),
     

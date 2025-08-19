@@ -7,15 +7,17 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import UserTB
-from .serializers import UserTBSerializer, LoginSerializer, UserProfileSerializer
+from .serializers import UserTBSerializer, LoginSerializer, UserProfileSerializer,UserDetailSerializer
 import jwt
 from django.conf import settings
 from datetime import datetime, timedelta
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework import status, permissions
 from drf_spectacular.utils import extend_schema
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
-
+from .serializers import UserDetailSerializer
+from .services.ai_service import clean_user_data_with_ai, enhance_cv_data
 
 import subprocess
 from django.http import JsonResponse
@@ -117,11 +119,20 @@ class UserLoginView(APIView):
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
                     "email": user.email,
-                    "first_name": user.first_name,
-                    "middle_name": user.middle_name,
-                    "last_name": user.last_name,
+                    "user":{
+                        "email": user.email,
+                        "first_name": user.first_name,
+                        "middle_name": user.middle_name,
+                        "last_name": user.last_name,
+                        "is_active": user.is_active,
+                        "is_staff": user.is_staff,
+                        "is_superuser": user.is_superuser,
+                        "created_at": user.created_at.isoformat(),
+                        "id": user.id,
+                    }
                     
-                }
+                },
+                status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 import logging
@@ -198,3 +209,64 @@ def run_migrations(request):
         return JsonResponse({"message": "✅ Migrations applied", "output": result.stdout})
     except subprocess.CalledProcessError as e:
         return JsonResponse({"error": "❌ Migration failed", "details": e.stderr}, status=500)
+    
+
+
+
+
+class UserDetailView(APIView):
+    """
+    API for retrieving user details.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        responses=UserDetailSerializer,
+        summary="Retrieve user details",
+        description="Get the details of the authenticated user."
+    )
+    def get(self, request):
+        try:
+            # Check if user is authenticated
+            if not request.user.is_authenticated:
+                return Response(
+                    {'error': 'Authentication required'}, 
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # First, get the serialized data from the user
+            serializer = UserDetailSerializer(request.user)
+            original_data = dict(serializer.data)  # Convert OrderedDict to dict
+            
+            # Send data to AI for cleaning and structuring
+            cleaned_data = clean_user_data_with_ai(original_data)
+            
+            # Enhance the cleaned data with AI
+            enhanced_data = enhance_cv_data(cleaned_data)
+            
+            # Create a new serializer with the enhanced data in context
+            serializer = UserDetailSerializer(
+                request.user, 
+                context={'enhanced_data': enhanced_data}
+            )
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except AuthenticationFailed as e:
+            return Response(
+                {'error': 'Authentication failed. Please log in again.'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except ValidationError as e:
+            # Handle validation errors
+            return Response({
+                'error': 'Validation error',
+                'details': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # If AI processing fails, return the original user data
+            serializer = UserDetailSerializer(request.user)
+            return Response({
+                'data': serializer.data,
+                'error': f'AI processing failed: {str(e)}'
+            }, status=status.HTTP_200_OK)

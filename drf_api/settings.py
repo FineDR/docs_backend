@@ -85,6 +85,16 @@ INSTALLED_APPS = [
     'drf_yasg',
     'drf_spectacular',
     'smsparser',
+    'personal_details',
+    'work_experiences',
+    'career_objective',
+    'skills_app',
+    'education_app',
+    'language_app',
+    'project_app',
+    'certificate_app',
+    'references_app',
+    'achivements_app',
 ]
 
 
