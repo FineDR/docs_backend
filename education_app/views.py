@@ -16,15 +16,13 @@ class EducationView(APIView):
         description="Authenticated users can submit multiple education entries at once"
     )
     def post(self, request):
-        user = request.user
         educations = request.data.get("education", [])
         created_entries = []
 
         for edu in educations:
-            edu["user"] = user.id
             serializer = EducationSerializer(data=edu, context={'request': request})
             if serializer.is_valid():
-                serializer.save()
+                serializer.save()  # user is automatically set in serializer
                 created_entries.append(serializer.data)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -33,6 +31,7 @@ class EducationView(APIView):
             {"message": "Education records submitted successfully", "data": created_entries},
             status=status.HTTP_201_CREATED
         )
+
 
     @extend_schema(
         responses=EducationSerializer,

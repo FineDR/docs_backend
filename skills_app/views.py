@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from .models import SkillSet
 from .serializers import SkillSetSerializer
 
+
 class SkillSetView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -16,8 +17,9 @@ class SkillSetView(APIView):
         description="Authenticated users can submit technical and soft skills"
     )
     def post(self, request):
-        serializer = SkillSetSerializer(data=request.data, context={'request': request})
+        serializer = SkillSetSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
+            # ✅ Remove user=request.user here, serializer handles it
             serializer.save()
             return Response(
                 {"message": "Skills submitted successfully", "data": serializer.data},
@@ -61,8 +63,9 @@ class SkillSetDetailView(APIView):
             skill_set = SkillSet.objects.get(pk=pk, user=request.user)
         except SkillSet.DoesNotExist:
             return Response({"error": "SkillSet not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = SkillSetSerializer(skill_set, data=request.data, context={'request': request})
+        serializer = SkillSetSerializer(skill_set, data=request.data, context={"request": request})
         if serializer.is_valid():
+            # ✅ Remove user=request.user here too
             serializer.save()
             return Response({"message": "Skills updated successfully", "data": serializer.data})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

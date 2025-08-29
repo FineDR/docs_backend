@@ -22,20 +22,18 @@ class ReferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reference
         fields = "__all__"
-
-class AchivementSerializer(serializers.ModelSerializer):
+class AchievementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Achievement
         fields = "__all__"
 
 
 class AchievementProfileSerializer(serializers.ModelSerializer):
-    achievements = AchivementSerializer(many=True, read_only=True)
+    achievements = AchievementSerializer(many=True, read_only=True)
 
     class Meta:
         model = AchievementProfile
-        fields = '__all__'
-
+        fields = "__all__"
 
 class PersonalDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -120,8 +118,8 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     career_objectives = CareerObjectiveSerializer(many=True, read_only=True)
-    achievement_profiles = AchievementProfileSerializer(
-        many=True, read_only=True, source='achievementprofile_set'
+    achievement_profile = AchievementProfileSerializer(  # 👈 singular
+        read_only=True
     )
     personal_details = PersonalDetailSerializer(
         read_only=True, source='personal_detail'

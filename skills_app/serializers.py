@@ -39,4 +39,19 @@ class SkillSetSerializer(serializers.ModelSerializer):
         technical_data = validated_data.pop('technical_skills', [])
         soft_data = validated_data.pop('soft_skills', [])
 
-        instanc
+        # ✅ Update basic fields
+        instance.full_name = validated_data.get('full_name', instance.full_name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.save()
+
+        # ✅ Clear and recreate technical skills
+        instance.technical_skills.all().delete()
+        for tech in technical_data:
+            TechnicalSkill.objects.create(skill_set=instance, **tech)
+
+        # ✅ Clear and recreate soft skills
+        instance.soft_skills.all().delete()
+        for soft in soft_data:
+            SoftSkill.objects.create(skill_set=instance, **soft)
+
+        return instance  # ✅ MUST RETURN

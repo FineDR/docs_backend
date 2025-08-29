@@ -15,7 +15,7 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         responsibilities_data = validated_data.pop("responsibilities", [])
-        user = self.context["request"].user  # get the logged-in user
+        user = self.context["request"].user  # set user from request
 
         work_experience = WorkExperience.objects.create(user=user, **validated_data)
 
@@ -26,11 +26,9 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         responsibilities_data = validated_data.pop("responsibilities", [])
-        instance.job_title = validated_data.get("job_title", instance.job_title)
-        instance.company = validated_data.get("company", instance.company)
-        instance.location = validated_data.get("location", instance.location)
-        instance.start_date = validated_data.get("start_date", instance.start_date)
-        instance.end_date = validated_data.get("end_date", instance.end_date)
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
 
         # Replace old responsibilities with new ones
