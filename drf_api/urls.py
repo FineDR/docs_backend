@@ -6,7 +6,10 @@ from rest_framework import permissions
 
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 
+def home(request):
+    return JsonResponse({"message": "Welcome to Docs API"})
 # Define Swagger schema view
 # schema_view = get_schema_view(
 #    openapi.Info(
@@ -29,6 +32,7 @@ from drf_spectacular.views import (
 urlpatterns = [
     path('grappelli/', include('grappelli.urls')),
     path('admin/', admin.site.urls),
+    path('', home),
     path('auth/', include('api.urls')),
     path('sms/', include('smsparser.urls')),
     path('api/', include('personal_details.urls')),
