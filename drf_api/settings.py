@@ -24,12 +24,21 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
-# Hosts (allow all for testing)
+# Hosts (allow all for testing; restrict in production if needed)
 ALLOWED_HOSTS = ["*"]
 
-# CORS / CSRF (allow all for testing)
+# CORS / CSRF
 CORS_ALLOW_ALL_ORIGINS = True
-CSRF_TRUSTED_ORIGINS = ["*"]
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF Trusted Origins must have scheme (http/https)
+CSRF_TRUSTED_ORIGINS = [
+    "https://docs-backend-rnsi.onrender.com",   # backend on Render
+    "http://localhost:8000",                    # local backend
+    "http://localhost:5173",                    # Vite frontend (local dev)
+    "https://beamish-sable-b6bd1f.netlify.app", # deployed frontend
+    "https://unique-semifreddo-0f060b.netlify.app",
+]
 
 # Toggle secure cookies
 if DEBUG:
@@ -38,8 +47,6 @@ if DEBUG:
 else:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-
-CORS_ALLOW_CREDENTIALS = True
 
 # Apps
 INSTALLED_APPS = [
