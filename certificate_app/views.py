@@ -20,21 +20,19 @@ class ProfileView(APIView):
         user = request.user
         serializer = ProfileSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            Profile.objects.update_or_create(
+            # Create or update profile
+            profile, _ = Profile.objects.update_or_create(
                 user=user,
                 defaults={
                     "full_name": serializer.validated_data["full_name"],
                     "email": serializer.validated_data["email"]
                 }
             )
-            # Handle certificates
-            profile = Profile.objects.get(user=user)
-            profile.certificates.all().delete()  # Remove old certs
-            certificates_data = serializer.validated_data.get("certificates", [])
-            for cert_data in certificates_data:
-                Certificate.objects.create(profile=profile, **cert_data)
+            # Let serializer handle certificates
+            serializer.update(profile, serializer.validated_data)
 
             return Response({"message": "Profile and certificates saved successfully"}, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -61,13 +59,7 @@ class ProfileView(APIView):
             profile = request.user.profile
             serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
             if serializer.is_valid():
-                serializer.save(user=request.user)
-                # Handle certificates
-                profile.certificates.all().delete()
-                certificates_data = serializer.validated_data.get("certificates", [])
-                for cert_data in certificates_data:
-                    Certificate.objects.create(profile=profile, **cert_data)
-
+                serializer.save()  # serializer handles profile and certificates
                 return Response(
                     {"message": "Profile and certificates updated successfully", "data": serializer.data},
                     status=status.HTTP_200_OK
@@ -107,7 +99,7 @@ class CertificateDetailView(APIView):
 
         serializer = CertificateSerializer(cert, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(profile=request.user.profile)
+            serializer.save()  # profile is read-only, no need to pass
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

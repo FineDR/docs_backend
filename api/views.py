@@ -270,3 +270,20 @@ class UserDetailView(APIView):
                 'data': serializer.data,
                 'error': f'AI processing failed: {str(e)}'
             }, status=status.HTTP_200_OK)
+        
+class AdminUserListView(APIView):
+    """
+    API to fetch all users for admin dashboard.
+    Only accessible by staff/superusers.
+    """
+    # permission_classes = [IsAdminUser] 
+
+    @extend_schema(
+        responses=UserDetailSerializer(many=True),
+        summary="Retrieve all users",
+        description="Get the full list of all users in the system. Admin only."
+    )
+    def get(self, request):
+        users = UserTB.objects.all()  # Fetch all users
+        serializer = UserDetailSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

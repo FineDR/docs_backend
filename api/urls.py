@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, VerifyEmailView, UserLoginView,LogoutView, UserProfileView,run_create_superuser,run_migrations,UserDetailView
+from .views import RegisterView, VerifyEmailView, UserLoginView,LogoutView, UserProfileView,run_create_superuser,run_migrations,UserDetailView,AdminUserListView
 from .password_reset import ForgotPasswordView,PasswordResetView
 urlpatterns = [
     path("signup/", RegisterView.as_view(), name="signup"),
@@ -12,4 +12,5 @@ urlpatterns = [
     path("create-superuser/", run_create_superuser),
     path("run-migrations/", run_migrations),
     path("user-details/", UserDetailView.as_view(), name="user-details"),
+    path("admin/users/", AdminUserListView.as_view(), name="admin-users"),
 ]

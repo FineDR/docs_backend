@@ -41,6 +41,8 @@ urlpatterns = [
     path('api/', include('certificate_app.urls')),
     path('api/', include('references_app.urls')),
     path('api/', include('achivements_app.urls')),
+    path('api/', include('cv_payments.urls')),
+
     # Swagger UI documentation
    #  path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),
     
