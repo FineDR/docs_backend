@@ -1,6 +1,6 @@
 # Ignore the virtual environment
-venv/
-
+myenv/
+./venv/
 # Ignore database files
 *.sqlite3
 

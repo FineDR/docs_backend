@@ -24,35 +24,12 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
-# Hosts
-ALLOWED_HOSTS = env.list(
-    "DJANGO_ALLOWED_HOSTS",
-    default=[
-        "localhost",
-        "127.0.0.1",
-        "docs-backend-rnsi.onrender.com",
-    ]
-)
+# Hosts (allow all for testing)
+ALLOWED_HOSTS = ["*"]
 
-# CORS / CSRF
-CORS_ALLOWED_ORIGINS = env.list(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default=[
-        "http://localhost:5173",
-        "https://unique-semifreddo-0f060b.netlify.app",
-        "https://beamish-sable-b6bd1f.netlify.app",
-    ]
-)
-
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=[
-        "https://docs-backend-rnsi.onrender.com",
-        "http://localhost:5173",
-        "https://unique-semifreddo-0f060b.netlify.app",
-        "https://beamish-sable-b6bd1f.netlify.app",
-    ]
-)
+# CORS / CSRF (allow all for testing)
+CORS_ALLOW_ALL_ORIGINS = True
+CSRF_TRUSTED_ORIGINS = ["*"]
 
 # Toggle secure cookies
 if DEBUG:
