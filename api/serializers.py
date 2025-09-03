@@ -149,15 +149,35 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return representation
 
 class UserTBSerializer(serializers.ModelSerializer):
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = UserTB
-        fields = ["email","first_name","middle_name","last_name",'created_at',"password"]
-        extra_kwargs = {"password": {"write_only": True}}
+        fields = ["email", "first_name", "middle_name", "last_name", "password", "confirm_password"]
+        extra_kwargs = {
+            "password": {"write_only": True},
+        }
+
+    def validate_email(self, value):
+        if UserTB.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered. Please log in.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.get("password") != attrs.get("confirm_password"):
+            raise serializers.ValidationError({"password": "Passwords do not match"})
+        return attrs
 
     def create(self, validated_data):
-        validated_data["is_active"] = False
-        user = UserTB.objects.create_user(**validated_data)
+        validated_data.pop("confirm_password")
+        password = validated_data.pop("password")
+        user = UserTB(**validated_data)
+        user.set_password(password)
+        user.is_active = False
+        user.save()
         return user
+
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()

@@ -162,6 +162,8 @@ TEMPLATES = [
 # Grappelli
 GRAPPELLI_INDEX_DASHBOARD = "api.dashboard.CustomIndexDashboard"
 GRAPPELLI_ADMIN_TITLE = "It Is Possible Admin Dashboard"
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
+
 
 # Passwords
 AUTH_PASSWORD_VALIDATORS = [
