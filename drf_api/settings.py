@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "references_app",
     "achivements_app",
     "cv_payments",
+    "jobs",
 
     # Third-party
     "rest_framework",
