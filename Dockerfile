@@ -1,12 +1,14 @@
 FROM python:3.11-slim
 
+# Environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+# Set working directory
 WORKDIR /code
 
-# Install system dependencies for Python packages, PyGObject, PyCairo, and bcc
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for Python packages and system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
     pkg-config \
@@ -20,26 +22,32 @@ RUN apt-get update && apt-get install -y \
     libreadline-dev \
     libsqlite3-dev \
     gettext \
-    bpfcc-tools \
-    libbpf-dev \
-    python3-bpfcc \
     libgirepository1.0-dev \
     python3-dev \
+    ufw \
+    ubuntu-drivers-common \
+    ubuntu-pro-client \
+    bpfcc-tools \
+    python3-bpfcc \
+    python3-apt \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements file
 COPY requirements.txt /code/
 
 # Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy the project code
+# Copy project code
 COPY . /code/
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
+# Expose port
 EXPOSE 8000
 
+# Start Django with Gunicorn
 CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 drf_api.wsgi:application"]
