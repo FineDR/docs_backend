@@ -5,10 +5,12 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-# Install system dependencies for Python packages
+# Install system dependencies for Python packages, PyGObject, PyCairo, and bcc
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
+    pkg-config \
+    libcairo2-dev \
     libffi-dev \
     libssl-dev \
     libxml2-dev \
@@ -21,13 +23,16 @@ RUN apt-get update && apt-get install -y \
     bpfcc-tools \
     libbpf-dev \
     python3-bpfcc \
+    libgirepository1.0-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
 COPY requirements.txt /code/
 
 # Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
 
 # Copy the project code
 COPY . /code/
