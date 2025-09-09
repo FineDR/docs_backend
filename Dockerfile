@@ -5,20 +5,34 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-# Install system dependencies for bcc
+# Install system dependencies for Python packages
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    libffi-dev \
+    libssl-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    gettext \
     bpfcc-tools \
     libbpf-dev \
     python3-bpfcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements
 COPY requirements.txt /code/
 
-# Remove bcc==0.29.1 from requirements.txt if it’s listed
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Upgrade pip and install Python dependencies
+RUN pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
 
+# Copy the project code
 COPY . /code/
 
+# Collect static files
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
