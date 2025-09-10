@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED 1
 # Set working directory
 WORKDIR /code
 
-# Install system dependencies for Python packages and system packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -25,8 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgirepository1.0-dev \
     python3-dev \
     ufw \
-    ubuntu-drivers-common \
-    ubuntu-pro-client \
     bpfcc-tools \
     python3-bpfcc \
     python3-apt \
