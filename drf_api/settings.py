@@ -21,25 +21,19 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
 # --- HOSTS ---
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])  # no https://
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])  # allow all hosts
 
 # --- CORS & CSRF ---
+CORS_ALLOW_ALL_ORIGINS = True  # allow requests from any frontend
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env.list(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default=[
-        "http://localhost:5173",
-        "https://fastdocplatform.netlify.app",
-    ]
-)
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=[
-        "http://localhost:5173",
-        "https://fastdocplatform.netlify.app",
-    ]
-)
 
+# For testing only: trust all CSRF origins (not recommended in production)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "https://fastdocplatform.netlify.app",
+]
+
+# Cookie security
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
