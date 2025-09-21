@@ -29,9 +29,11 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])
 
 # CORS & CSRF
 CORS_ALLOW_CREDENTIALS = True
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # local frontend
     "https://fastdocplatform.netlify.app",  # deployed frontend
+    "https://docs-backend-rnsi.onrender.com" 
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -82,9 +84,8 @@ INSTALLED_APPS = [
     "drf_spectacular",
 ]
 
-# Middleware
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # Must be high
+    "corsheaders.middleware.CorsMiddleware",  # must be at the very top
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
