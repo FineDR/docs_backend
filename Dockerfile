@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
 # Environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /code
@@ -45,8 +45,8 @@ COPY . /code/
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
-# Expose port
-EXPOSE 8000
+# Expose Render's dynamic port
+EXPOSE $PORT
 
-# Start Django with Gunicorn
-CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:8000 drf_api.wsgi:application"]
+# Run migrations and start Gunicorn, binding to $PORT
+CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:$PORT drf_api.wsgi:application"]
