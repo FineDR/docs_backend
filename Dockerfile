@@ -1,13 +1,14 @@
 FROM python:3.11-slim
 
-# Environment variables
+# --- Environment variables ---
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
-# Set working directory
+# --- Set working directory ---
 WORKDIR /code
 
-# Install system dependencies
+# --- Install system dependencies ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -24,29 +25,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gettext \
     libgirepository1.0-dev \
     python3-dev \
-    ufw \
-    bpfcc-tools \
-    python3-bpfcc \
-    python3-apt \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+# --- Copy requirements and install Python dependencies ---
 COPY requirements.txt /code/
-
-# Upgrade pip and install Python dependencies including Gunicorn
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir gunicorn && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy project code
+# --- Copy project code ---
 COPY . /code/
 
-# Collect static files
+# --- Collect static files ---
 RUN python manage.py collectstatic --noinput
 
-# Expose Render's dynamic port
+# --- Add entrypoint script ---
+COPY entrypoint.sh /code/entrypoint.sh
+RUN chmod +x /code/entrypoint.sh
+
+# --- Expose port ---
 EXPOSE $PORT
 
-# Run migrations and start Gunicorn, binding to $PORT
-CMD ["sh", "-c", "python manage.py migrate && gunicorn --bind 0.0.0.0:$PORT drf_api.wsgi:application"]
+# --- Run entrypoint ---
+CMD ["/code/entrypoint.sh"]

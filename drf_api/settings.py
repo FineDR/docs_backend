@@ -11,31 +11,28 @@ from dotenv import load_dotenv
 # --- BASE DIRECTORY ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- LOAD .ENV ---
+# --- LOAD ENV ---
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 env = environ.Env(DJANGO_DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # --- SECURITY ---
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
-
-# --- HOSTS ---
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])  # allow all hosts
+DEBUG = env.bool("DJANGO_DEBUG", default=False)  # Production default: False
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])  # Render dynamic host allowed
 
 # --- CORS & CSRF ---
-CORS_ALLOW_ALL_ORIGINS = True  # allow requests from any frontend
+CORS_ALLOW_ALL_ORIGINS = True  # allow all frontend origins
 CORS_ALLOW_CREDENTIALS = True
-
-# For testing only: trust all CSRF origins (not recommended in production)
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://fastdocplatform.netlify.app",
-]
-
-# Cookie security
+]  # add your production domain(s) here
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_SSL_REDIRECT = not DEBUG
 
 # --- INSTALLED APPS ---
 INSTALLED_APPS = [
