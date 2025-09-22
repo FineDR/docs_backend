@@ -1,3 +1,4 @@
+# Use slim Python 3.11
 FROM python:3.11-slim
 
 # Prevent .pyc and ensure logs appear instantly
@@ -5,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8000
 
-# Set working dir
+# Set working directory
 WORKDIR /code
 
 # Install system dependencies
@@ -25,23 +26,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir gunicorn && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project files
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Add entrypoint script
+# Copy entrypoint script
 COPY entrypoint.sh /code/entrypoint.sh
 RUN chmod +x /code/entrypoint.sh
 
+# Expose the port Render uses
 EXPOSE $PORT
 
-# Start app
+# Start the entrypoint
 CMD ["/code/entrypoint.sh"]
