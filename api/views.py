@@ -23,13 +23,7 @@ import subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from threading import Thread
-
-def send_verification_email(subject, body, recipient):
-    try:
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
-    except Exception as e:
-        print(f"Email send failed: {e}")
+from .tasks import send_verification_email
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -56,8 +50,8 @@ class RegisterView(APIView):
                 "Best regards,\nYour Company Team"
             )
 
-            # Run email in a separate thread (non-blocking)
-            Thread(target=send_verification_email, args=(email_subject, email_body, user.email)).start()
+            # Send email asynchronously via Celery
+            send_verification_email.delay(user.email, email_subject, email_body)
 
             return Response({
                 "message": "User registered successfully. Please check your email to verify your account."
