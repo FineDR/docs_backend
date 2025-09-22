@@ -23,58 +23,48 @@ import subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from threading import Thread
+
+def send_verification_email(subject, body, recipient):
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=True)
+    except Exception as e:
+        print(f"Email send failed: {e}")
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
-    """
-    API for user registration.
-    """
-    @extend_schema(
-        request=UserTBSerializer,
-        responses={200: None},
-        summary="Register a new user",
-        description="Takes email and password to create a new user.",
-    )
-
-   
 
     def post(self, request):
-     serializer = UserTBSerializer(data=request.data)
-     if serializer.is_valid():
-        user = serializer.save()
+        serializer = UserTBSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
 
-        # Create your own JWT token with user_id payload and expiration
-        payload = {
-            "user_id": str(user.id),
-            "exp": datetime.utcnow() + timedelta(hours=24),  # token expiry (e.g. 24 hours)
-            "iat": datetime.utcnow(),
-        }
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+            payload = {
+                "user_id": str(user.id),
+                "exp": datetime.utcnow() + timedelta(hours=24),
+                "iat": datetime.utcnow(),
+            }
+            token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+            verification_url = f"{settings.FRONTEND_BASE_URL}/verify-email?token={token}"
 
-        verification_url = f"{settings.FRONTEND_BASE_URL}/verify-email?token={token}"
+            email_subject = "Verify Your Email Address"
+            email_body = (
+                f"Hello {user.email},\n\n"
+                "Thank you for signing up! Please verify your email address to activate your account.\n\n"
+                f"Click here: {verification_url}\n\n"
+                "If you did not sign up, ignore this email.\n\n"
+                "Best regards,\nYour Company Team"
+            )
 
-        # Email Content
-        email_subject = "Verify Your Email Address"
-        email_body = (
-            f"Hello {user.email},\n\n"
-            "Thank you for signing up! Please verify your email address to activate your account.\n\n"
-            f"Click the link below to confirm your email:\n{verification_url}\n\n"
-            "If you did not sign up, you can ignore this email.\n\n"
-            "Best regards,\nYour Company Team"
-        )
+            # Run email in a separate thread (non-blocking)
+            Thread(target=send_verification_email, args=(email_subject, email_body, user.email)).start()
 
-        send_mail(
-            email_subject,
-            email_body,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
+            return Response({
+                "message": "User registered successfully. Please check your email to verify your account."
+            }, status=status.HTTP_201_CREATED)
 
-        return Response({
-            "message": "User registered successfully. Please check your email to verify your account."
-        }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class VerifyEmailView(APIView):
     def get(self, request):
         token = request.GET.get("token")
