@@ -27,15 +27,36 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["docs-backend-rnsi.onrender.com"]
+)
 
 # -------------------------------------------------------------------
 # CORS & CSRF
 # -------------------------------------------------------------------
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="https://fastdocplatform.netlify.app")
+
+CORS_ALLOWED_ORIGINS = env.list(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
+
+CSRF_TRUSTED_ORIGINS = env.list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
+
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+
+# -------------------------------------------------------------------
+# Installed apps
+# -------------------------------------------------------------------
 INSTALLED_APPS = [
     "grappelli",
     "grappelli.dashboard",
-
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -69,8 +90,11 @@ INSTALLED_APPS = [
     "drf_spectacular",
 ]
 
+# -------------------------------------------------------------------
+# Middleware
+# -------------------------------------------------------------------
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # Must be high
+    "corsheaders.middleware.CorsMiddleware",  # Must be first
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -79,25 +103,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-# -------------------------------------------------------------------
-# CORS / CSRF config (development + production)
-# -------------------------------------------------------------------
-FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
-
-# If not explicitly set, fall back to FRONTEND_BASE_URL
-CORS_ALLOWED_ORIGINS = env.list(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
-
-CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
 
 # -------------------------------------------------------------------
 # URLs / WSGI
