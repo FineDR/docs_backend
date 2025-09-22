@@ -8,34 +8,30 @@ import os
 import environ
 from dotenv import load_dotenv
 
-# Base directory
+# -------------------------------------------------------------------
+# Base directory and environment setup
+# -------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env
+# Load .env file
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-# Initialize environment variables
 env = environ.Env(
     DJANGO_DEBUG=(bool, False)
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-# SECURITY
+# -------------------------------------------------------------------
+# Security
+# -------------------------------------------------------------------
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-# Hosts
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
+# -------------------------------------------------------------------
 # CORS & CSRF
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
-CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
-
-CSRF_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
-
-# Installed apps
+# -------------------------------------------------------------------
 INSTALLED_APPS = [
     "grappelli",
     "grappelli.dashboard",
@@ -73,7 +69,6 @@ INSTALLED_APPS = [
     "drf_spectacular",
 ]
 
-# Middleware
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be high
     "django.middleware.security.SecurityMiddleware",
@@ -85,21 +80,49 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# -------------------------------------------------------------------
+# CORS / CSRF config (development + production)
+# -------------------------------------------------------------------
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
+
+# If not explicitly set, fall back to FRONTEND_BASE_URL
+CORS_ALLOWED_ORIGINS = env.list(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
+CSRF_TRUSTED_ORIGINS = env.list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
+
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+
+# -------------------------------------------------------------------
+# URLs / WSGI
+# -------------------------------------------------------------------
 ROOT_URLCONF = "drf_api.urls"
 WSGI_APPLICATION = "drf_api.wsgi.application"
 
+# -------------------------------------------------------------------
 # Database
+# -------------------------------------------------------------------
 DATABASES = {
     "default": env.db(
         "DATABASE_URL",
-        default="postgres://postgres:mlekwa123@localhost:5432/doc_db"
+        default="postgres://postgres:password@localhost:5432/doc_db"
     )
 }
 
-# Custom user model
+# -------------------------------------------------------------------
+# Custom user
+# -------------------------------------------------------------------
 AUTH_USER_MODEL = "api.UserTB"
 
-# Email (works locally and in production)
+# -------------------------------------------------------------------
+# Email
+# -------------------------------------------------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
@@ -108,14 +131,20 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+# -------------------------------------------------------------------
 # Stripe
+# -------------------------------------------------------------------
 STRIPE_TEST_API_KEY = env("STRIPE_TEST_API_KEY", default="")
 STRIPE_TEST_SECRET_KEY = env("STRIPE_TEST_SECRET_KEY", default="")
 
+# -------------------------------------------------------------------
 # OpenRouter
+# -------------------------------------------------------------------
 OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
 
+# -------------------------------------------------------------------
 # DRF / JWT
+# -------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -128,8 +157,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-
-
 SPECTACULAR_SETTINGS = {
     "TITLE": "It Is Possible API",
     "DESCRIPTION": "Comprehensive API documentation for It Is Possible.",
@@ -139,7 +166,9 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX_TRIM": True,
 }
 
+# -------------------------------------------------------------------
 # Templates
+# -------------------------------------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -156,12 +185,15 @@ TEMPLATES = [
     },
 ]
 
+# -------------------------------------------------------------------
 # Grappelli
+# -------------------------------------------------------------------
 GRAPPELLI_INDEX_DASHBOARD = "api.dashboard.CustomIndexDashboard"
 GRAPPELLI_ADMIN_TITLE = "It Is Possible Admin Dashboard"
-FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
+# -------------------------------------------------------------------
 # Password validators
+# -------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -169,18 +201,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# -------------------------------------------------------------------
 # Internationalization
+# -------------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# -------------------------------------------------------------------
 # Static & media
+# -------------------------------------------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# -------------------------------------------------------------------
 # Default primary key field type
+# -------------------------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
