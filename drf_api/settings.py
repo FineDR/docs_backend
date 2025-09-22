@@ -35,21 +35,17 @@ ALLOWED_HOSTS = env.list(
 # -------------------------------------------------------------------
 # CORS & CSRF
 # -------------------------------------------------------------------
+# Frontend URL
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="https://fastdocplatform.netlify.app")
 
-CORS_ALLOWED_ORIGINS = env.list(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
-
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
+# CORS
+CORS_ALLOWED_ORIGINS = [url.strip() for url in env("DJANGO_CORS_ALLOWED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
+CSRF_TRUSTED_ORIGINS = [url.strip() for url in env("DJANGO_CSRF_TRUSTED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
+
 
 # -------------------------------------------------------------------
 # Installed apps
