@@ -35,17 +35,18 @@ ALLOWED_HOSTS = env.list(
 # -------------------------------------------------------------------
 # CORS & CSRF
 # -------------------------------------------------------------------
-# Frontend URL
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="https://fastdocplatform.netlify.app")
 
-# CORS
+# Allow multiple origins from env or fallback
 CORS_ALLOWED_ORIGINS = [url.strip() for url in env("DJANGO_CORS_ALLOWED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
 CSRF_TRUSTED_ORIGINS = [url.strip() for url in env("DJANGO_CSRF_TRUSTED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
-
+CORS_ALLOW_ALL_ORIGINS = False
+# Optional: temporarily allow all origins for testing (disable in production)
+# CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # -------------------------------------------------------------------
 # Installed apps
@@ -124,7 +125,8 @@ AUTH_USER_MODEL = "api.UserTB"
 # -------------------------------------------------------------------
 # Email
 # -------------------------------------------------------------------
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+# Use console backend during development/testing to avoid server crashes
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
