@@ -26,5 +26,5 @@ RUN python manage.py collectstatic --noinput
 # Expose port
 EXPOSE 8000
 
-# Start app with Gunicorn
-CMD ["gunicorn", "drf_api.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Start app with Gunicorn (optimized for Render)
+CMD ["gunicorn", "drf_api.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "1", "--timeout", "120"]

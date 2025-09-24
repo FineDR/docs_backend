@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import logging
+from requests.adapters import HTTPAdapter, Retry
 
 # -----------------------
 # Logging setup
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 class JobScraper:
     def __init__(self):
-        # ✅ Sources list
         self.sources = [
             {"name": "RemoteOK", "url": "https://remoteok.com/api", "type": "api", "deadline_field": None},
             {"name": "JobwebTanzania", "url": "https://www.jobwebtanzania.com/", "type": "html", "selector": ".job-listing a", "deadline_field": None},
@@ -31,17 +31,30 @@ class JobScraper:
             {"name": "MilanFiberITSupport", "url": "mailto:hr@mctv.co.tz", "type": "contact", "deadline_field": None},
         ]
 
+        # Setup a reusable requests session with retries
+        self.session = requests.Session()
+        retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+        self.session.mount("https://", HTTPAdapter(max_retries=retries))
+        self.session.mount("http://", HTTPAdapter(max_retries=retries))
+
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/117.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        }
+
     # -----------------------
     # API fetch
     # -----------------------
     def fetch_api(self, url, source_name, deadline_field=None):
-        headers = {"User-Agent": "Mozilla/5.0"}
         jobs = []
-
         try:
-            resp = requests.get(url, headers=headers, timeout=10)
+            resp = self.session.get(url, headers=self.headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
+
             if isinstance(data, list) and source_name == "RemoteOK":
                 data = data[1:]  # Skip metadata
 
@@ -52,21 +65,9 @@ class JobScraper:
                 link = job.get("url") or job.get("link")
                 date_posted = job.get(deadline_field) if deadline_field else None
 
-                if not title or not link:
-                    continue
-
-                # Skip expired
-                if date_posted:
-                    try:
-                        deadline = datetime.fromisoformat(date_posted)
-                        if deadline < datetime.now():
-                            continue
-                    except Exception:
-                        pass
-
                 jobs.append({
                     "source": source_name,
-                    "title": title.strip(),
+                    "title": title.strip() if title else None,
                     "company": company.strip() if company else None,
                     "location": location.strip() if location else None,
                     "link": link,
@@ -88,8 +89,8 @@ class JobScraper:
     def fetch_html(self, url, source_name, selector=None):
         jobs = []
 
-        # Contact links
-        if source_name.lower().find("mailto") != -1 or url.startswith("mailto:"):
+        # Mailto / contact
+        if url.startswith("mailto:"):
             jobs.append({
                 "source": source_name,
                 "title": "Contact",
@@ -100,7 +101,7 @@ class JobScraper:
             })
             return jobs
 
-        # Skip if no selector
+        # If no selector, treat as single posting
         if not selector:
             jobs.append({
                 "source": source_name,
@@ -112,24 +113,21 @@ class JobScraper:
             })
             return jobs
 
-        headers = {"User-Agent": "Mozilla/5.0"}
-
         try:
-            resp = requests.get(url, headers=headers, timeout=10)
+            resp = self.session.get(url, headers=self.headers, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
             for el in soup.select(selector):
-                title = el.text.strip()
+                title = el.get_text(strip=True)
                 href = el.get("href")
-                if title and href:
-                    jobs.append({
-                        "source": source_name,
-                        "title": title,
-                        "company": None,
-                        "location": None,
-                        "link": href,
-                        "date_posted": None
-                    })
+                jobs.append({
+                    "source": source_name,
+                    "title": title if title else "Job Posting",
+                    "company": None,
+                    "location": None,
+                    "link": href,
+                    "date_posted": None
+                })
         except requests.RequestException as e:
             logger.warning("[%s] HTML request failed: %s", source_name, e)
         except Exception as e:
@@ -151,12 +149,16 @@ class JobScraper:
             except Exception as e:
                 logger.warning("[%s] Failed to fetch jobs: %s", src["name"], e)
 
-        # Sort newest first by date_posted
-        return sorted(
-            all_jobs,
-            key=lambda x: x["date_posted"] if x["date_posted"] else datetime.now().isoformat(),
-            reverse=True
-        )
+        # Sort by date_posted if available, fallback to datetime.min
+        def sort_key(job):
+            if job["date_posted"]:
+                try:
+                    return datetime.fromisoformat(job["date_posted"])
+                except Exception:
+                    return datetime.min
+            return datetime.min
+
+        return sorted(all_jobs, key=sort_key, reverse=True)
 
 
 # -----------------------
@@ -165,5 +167,5 @@ class JobScraper:
 if __name__ == "__main__":
     scraper = JobScraper()
     jobs = scraper.get_all_jobs()
-    for job in jobs[:20]:  # Show first 20 jobs
+    for job in jobs[:20]:  # First 20 jobs
         print(f"{job['source']} | {job['title']} - {job['company']} -> {job['link']}")
