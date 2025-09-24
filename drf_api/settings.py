@@ -27,10 +27,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list(
-    "DJANGO_ALLOWED_HOSTS",
-    default=["docs-backend-rnsi.onrender.com"]
-)
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"])
 
 # -------------------------------------------------------------------
 # CORS & CSRF
@@ -39,9 +36,8 @@ ALLOWED_HOSTS = env.list(
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="https://fastdocplatform.netlify.app")
 
 # CORS
-CORS_ALLOWED_ORIGINS = [url.strip() for url in env("DJANGO_CORS_ALLOWED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
-CSRF_TRUSTED_ORIGINS = [url.strip() for url in env("DJANGO_CSRF_TRUSTED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
-
+CORS_ALLOWED_ORIGINS = [env("DJANGO_CORS_ALLOWED_ORIGINS")]
+CSRF_TRUSTED_ORIGINS = [env("DJANGO_CSRF_TRUSTED_ORIGINS")]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
