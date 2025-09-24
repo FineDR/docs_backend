@@ -26,23 +26,18 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-default-key")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "docs-backend-rnsi.onrender.com"])
+# Read comma-separated allowed hosts from .env
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
-# -------------------------------------------------------------------
-# CORS & CSRF
-# -------------------------------------------------------------------
+# Frontend base URL
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
-# CORS settings
+# CORS
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    FRONTEND_BASE_URL,  # Frontend URL (can be localhost in dev, Netlify in prod)
-]
+CORS_ALLOWED_ORIGINS = [FRONTEND_BASE_URL]
 
-CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_BASE_URL,
-]
-
+# CSRF
+CSRF_TRUSTED_ORIGINS = [FRONTEND_BASE_URL]
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
