@@ -1,25 +1,38 @@
-# Python cache files
+# --- PYTHON ---
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environment
+# --- ENVIRONMENTS ---
 myenv/
 env/
 venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Django stuff
+# --- DJANGO STUFF ---
 *.sqlite3
 *.log
 *.pot
 *.pyc
 *.mo
 *.swp
+db.sqlite3
+media/
+staticfiles/
 
-# IDEs
+# --- ENV FILES (very important for secrets) ---
+.env
+.env.*
+!.env.example   # but keep a safe example template
+
+# --- IDEs / EDITORS ---
 .vscode/
 .idea/
+*.iml
 
-# OS files
+# --- OS FILES ---
 .DS_Store
 Thumbs.db
