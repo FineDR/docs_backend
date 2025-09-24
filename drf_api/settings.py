@@ -35,18 +35,17 @@ ALLOWED_HOSTS = env.list(
 # -------------------------------------------------------------------
 # CORS & CSRF
 # -------------------------------------------------------------------
+# Frontend URL
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="https://fastdocplatform.netlify.app")
 
-# Allow multiple origins from env or fallback
+# CORS
 CORS_ALLOWED_ORIGINS = [url.strip() for url in env("DJANGO_CORS_ALLOWED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
 CSRF_TRUSTED_ORIGINS = [url.strip() for url in env("DJANGO_CSRF_TRUSTED_ORIGINS", default=FRONTEND_BASE_URL).split(",")]
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
-CORS_ALLOW_ALL_ORIGINS = False
-# Optional: temporarily allow all origins for testing (disable in production)
-# CORS_ALLOW_ALL_ORIGINS = DEBUG
+
 
 # -------------------------------------------------------------------
 # Installed apps
@@ -61,6 +60,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework_simplejwt.token_blacklist",
+    "whitenoise.runserver_nostatic",
 
     # Local apps
     "api",
@@ -93,6 +93,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be first
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -125,17 +126,14 @@ AUTH_USER_MODEL = "api.UserTB"
 # -------------------------------------------------------------------
 # Email
 # -------------------------------------------------------------------
-# Use console backend during development/testing to avoid server crashes
-if env.bool("DJANGO_USE_CONSOLE_EMAIL", default=True):
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 # -------------------------------------------------------------------
 # Stripe
 # -------------------------------------------------------------------
@@ -227,10 +225,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Default primary key field type
 # -------------------------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Redis as Celery broker
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
+# Use Whitenoise for compressed & cached static files in production
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

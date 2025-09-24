@@ -1,46 +1,30 @@
-# Use slim Python 3.11
+# Use official Python image
 FROM python:3.11-slim
 
-# Prevent .pyc and ensure logs appear instantly
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Set working directory
-WORKDIR /code
+# Set work directory
+WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    libpq-dev \
-    pkg-config \
-    libcairo2-dev \
-    libffi-dev \
-    libssl-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    zlib1g-dev \
-    gettext \
-    python3-dev \
-    git \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir gunicorn && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .
 
-# Copy entrypoint script
-COPY entrypoint.sh /code/entrypoint.sh
-RUN chmod +x /code/entrypoint.sh
+# Collect static files
+RUN python manage.py collectstatic --noinput
 
-# Expose the port Render uses
-EXPOSE $PORT
+# Expose port
+EXPOSE 8000
 
-# Start the entrypoint
-CMD ["/code/entrypoint.sh"]
+# Start app with Gunicorn
+CMD ["gunicorn", "drf_api.wsgi:application", "--bind", "0.0.0.0:8000"]
