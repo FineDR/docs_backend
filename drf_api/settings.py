@@ -40,6 +40,9 @@ CORS_ALLOWED_ORIGINS = [FRONTEND_BASE_URL]
 CSRF_TRUSTED_ORIGINS = [FRONTEND_BASE_URL]
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
+# settings.py
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # -------------------------------------------------------------------
 # Installed apps
