@@ -47,7 +47,7 @@ urlpatterns = [
     path('api/', include('achivements_app.urls')),
     path('api/', include('cv_payments.urls')),
     # project/urls.py
-    path("api/", include("jobs.urls")),
+    # path("api/", include("jobs.urls")),
     path("api/", include("letterApp.urls")),
     path('api/', include('payments.urls')),
 
