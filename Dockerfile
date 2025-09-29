@@ -16,7 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --no-input
+ARG DATABASE_URL
+RUN DATABASE_URL=${DATABASE_URL} python manage.py collectstatic --no-input
+
 
 
 EXPOSE 8000
