@@ -82,9 +82,19 @@ WSGI_APPLICATION = "drf_api.wsgi.application"
 
 # --- Database ---
 # --- Database ---
-DATABASES = {
-    "default": env.db("DATABASE_URL")
-}
+
+if env("DATABASE_URL", default=None):
+    DATABASES = {
+        "default": env.db("DATABASE_URL")
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
 
 
 # --- Custom user ---
