@@ -49,6 +49,8 @@ urlpatterns = [
     # project/urls.py
     path("api/", include("jobs.urls")),
     path("api/", include("letterApp.urls")),
+    path('api/', include('payments.urls')),
+
 
 
     # Swagger UI documentation

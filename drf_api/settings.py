@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "references_app",
     "achivements_app",
     "cv_payments",
+    'payments',
     "jobs",
     "letterApp",
 
