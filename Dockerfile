@@ -16,11 +16,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Ensure DATABASE_URL is available at runtime
 ARG DATABASE_URL
-# Add this line to make the DATABASE_URL available at runtime
 ENV DATABASE_URL=${DATABASE_URL}
+
+# Collect static files
 RUN python manage.py collectstatic --no-input
 
+# Expose port
 EXPOSE 8000
 
-CMD ["gunicorn", "drf_api.wsgi:application", "--bind", "0.0.0.0:8000"]
+# CMD: run migrations then start Gunicorn
+CMD python manage.py migrate --no-input && \
+    gunicorn drf_api.wsgi:application --bind 0.0.0.0:8000
