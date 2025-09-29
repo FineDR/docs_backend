@@ -17,9 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ARG DATABASE_URL
-RUN DATABASE_URL=${DATABASE_URL} python manage.py collectstatic --no-input
-
-
+# Add this line to make the DATABASE_URL available at runtime
+ENV DATABASE_URL=${DATABASE_URL}
+RUN python manage.py collectstatic --no-input
 
 EXPOSE 8000
 
