@@ -81,12 +81,11 @@ ROOT_URLCONF = "drf_api.urls"
 WSGI_APPLICATION = "drf_api.wsgi.application"
 
 # --- Database ---
+# --- Database ---
 DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgres://postgres:password@localhost:5432/doc_db"
-    )
+    "default": env.db("DATABASE_URL")
 }
+
 
 # --- Custom user ---
 AUTH_USER_MODEL = "api.UserTB"
