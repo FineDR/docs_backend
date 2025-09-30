@@ -3,28 +3,24 @@ WSGI config for drf_api project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
-For more information on this file, see
+For more information, see
 https://docs.djangoproject.com/en/5.1/howto/deployment/wsgi/
 """
 
 import os
 from django.core.wsgi import get_wsgi_application
+from dotenv import load_dotenv
+import sys
 
-# Set default settings module
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'drf_api.settings')
+# Project base directory
+project_home = '/home/yourusername/docs_backend'
+if project_home not in sys.path:
+    sys.path.append(project_home)
 
-# --- Run migrations programmatically ---
-import django
-from django.core.management import call_command
+# Load environment variables
+load_dotenv(os.path.join(project_home, ".env.production"))
 
-django.setup()
+# Django settings
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "drf_api.settings")
 
-try:
-    print("Applying database migrations...")
-    call_command("migrate", interactive=False)
-    print("Migrations applied successfully.")
-except Exception as e:
-    print(f"Error running migrations: {e}")
-
-# --- Initialize WSGI application ---
 application = get_wsgi_application()
