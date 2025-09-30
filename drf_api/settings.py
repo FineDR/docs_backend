@@ -1,4 +1,6 @@
 from pathlib import Path
+import dj_database_url
+
 import os
 import environ
 from dotenv import load_dotenv
@@ -84,16 +86,19 @@ WSGI_APPLICATION = "drf_api.wsgi.application"
 # --- Database ---
 # --- Database ---
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT', cast=int),
+
+if env("DATABASE_URL", default=None):
+    DATABASES = {
+        "default": dj_database_url.parse(env("DATABASE_URL"))
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
 
 
 # --- Custom user ---
