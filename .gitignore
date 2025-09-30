@@ -11,6 +11,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env
+
 
 # --- DJANGO STUFF ---
 *.sqlite3
