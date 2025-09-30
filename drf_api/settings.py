@@ -26,17 +26,18 @@ ALLOWED_HOSTS = env.list(
 # --- Frontend ---
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
-# --- CORS / CSRF ---
-CORS_ALLOWED_ORIGINS = env.list(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://kululinda.pythonanywhere.com",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "https://kululinda.pythonanywhere.com",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = env.list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
-    default=[FRONTEND_BASE_URL]
-)
 
 # --- Installed Apps ---
 INSTALLED_APPS = [
