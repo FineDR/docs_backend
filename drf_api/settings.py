@@ -1,14 +1,12 @@
 from pathlib import Path
 import dj_database_url
-
 import os
 import environ
 from dotenv import load_dotenv
-from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load env
+# --- Load .env ---
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 env = environ.Env(
     DJANGO_DEBUG=(bool, False)
@@ -17,18 +15,28 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # --- Security ---
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-fallback")
-DEBUG = env.bool("DJANGO_DEBUG", default=False)
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
-# Frontend
+# --- Hosts ---
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["localhost", "127.0.0.1"]
+)
+
+# --- Frontend ---
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
 # --- CORS / CSRF ---
+CORS_ALLOWED_ORIGINS = env.list(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[FRONTEND_BASE_URL])
-CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[FRONTEND_BASE_URL])
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = env.list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default=[FRONTEND_BASE_URL]
+)
 
 # --- Installed Apps ---
 INSTALLED_APPS = [
@@ -57,7 +65,7 @@ INSTALLED_APPS = [
     "references_app",
     "achivements_app",
     "cv_payments",
-    'payments',
+    "payments",
     "jobs",
     "letterApp",
 
@@ -86,9 +94,6 @@ ROOT_URLCONF = "drf_api.urls"
 WSGI_APPLICATION = "drf_api.wsgi.application"
 
 # --- Database ---
-# --- Database ---
-
-
 if env("DATABASE_URL", default=None):
     DATABASES = {
         "default": dj_database_url.parse(env("DATABASE_URL"))
@@ -100,8 +105,6 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
-
 
 # --- Custom user ---
 AUTH_USER_MODEL = "api.UserTB"
@@ -172,20 +175,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# --- Logging ---
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        },
-    },
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {'django.db.backends': {'handlers': ['console'], 'level': 'DEBUG'}},
 }
 
 # --- Internationalization ---
