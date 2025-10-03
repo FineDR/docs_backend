@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "payments",
     "jobs",
     "letterApp",
+    "project_report",
 
     # Third-party
     "rest_framework",
