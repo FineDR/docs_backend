@@ -18,10 +18,18 @@ from django.http import JsonResponse
 from django.contrib.auth import get_user_model
 from .serializers import UserDetailSerializer
 from .services.ai_service import clean_user_data_with_ai, enhance_cv_data
+from django.contrib.auth.models import User
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import logging
+from api.models import UserTB
 
+logger = logging.getLogger(__name__)
 import subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+
+# User = settings.AUTH_USER_MODEL
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -114,30 +122,23 @@ class UserLoginView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
+
+            user_data = UserDetailSerializer(
+                user,
+                context={'enhanced_data': getattr(user, 'enhanced_data', None)}
+            ).data
             return Response(
                 {
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
                     "email": user.email,
-                    "user":{
-                        "email": user.email,
-                        "first_name": user.first_name,
-                        "middle_name": user.middle_name,
-                        "last_name": user.last_name,
-                        "is_active": user.is_active,
-                        "is_staff": user.is_staff,
-                        "is_superuser": user.is_superuser,
-                        "created_at": user.created_at.isoformat(),
-                        "id": user.id,
-                    }
+                    "user":user_data
                     
                 },
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
-import logging
 
-logger = logging.getLogger(__name__)
 
 class LogoutView(APIView):
     permission_classes = [AllowAny]
@@ -216,7 +217,7 @@ def run_migrations(request):
 
 class UserDetailView(APIView):
     """
-    API for retrieving user details.
+    API for retrieving and updating user details with AI enhancement.
     """
     permission_classes = [IsAuthenticated]
     
@@ -226,50 +227,75 @@ class UserDetailView(APIView):
         description="Get the details of the authenticated user."
     )
     def get(self, request):
+        """
+        Returns AI-enhanced user details.
+        If not yet enhanced, triggers enhancement automatically.
+        """
         try:
-            # Check if user is authenticated
-            if not request.user.is_authenticated:
-                return Response(
-                    {'error': 'Authentication required'}, 
-                    status=status.HTTP_401_UNAUTHORIZED
+            user = request.user
+
+            # If AI-enhanced data already exists
+            if user.enhanced_data:
+                serializer = UserDetailSerializer(
+                    user,
+                    context={'enhanced_data': user.enhanced_data}
                 )
-            
-            # First, get the serialized data from the user
-            serializer = UserDetailSerializer(request.user)
-            original_data = dict(serializer.data)  # Convert OrderedDict to dict
-            
-            # Send data to AI for cleaning and structuring
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # Otherwise, generate it now
+            serializer = UserDetailSerializer(user)
+            original_data = dict(serializer.data)
+
             cleaned_data = clean_user_data_with_ai(original_data)
-            
-            # Enhance the cleaned data with AI
             enhanced_data = enhance_cv_data(cleaned_data)
-            
-            # Create a new serializer with the enhanced data in context
-            serializer = UserDetailSerializer(
-                request.user, 
-                context={'enhanced_data': enhanced_data}
-            )
-            
+
+            user.enhanced_data = enhanced_data
+            user.save(update_fields=['enhanced_data'])
+
+            serializer = UserDetailSerializer(user, context={'enhanced_data': enhanced_data})
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        except AuthenticationFailed as e:
-            return Response(
-                {'error': 'Authentication failed. Please log in again.'}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except ValidationError as e:
-            # Handle validation errors
-            return Response({
-                'error': 'Validation error',
-                'details': e.detail
-            }, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            # If AI processing fails, return the original user data
             serializer = UserDetailSerializer(request.user)
             return Response({
                 'data': serializer.data,
                 'error': f'AI processing failed: {str(e)}'
             }, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        request=None,
+        responses=UserDetailSerializer,
+        summary="Re-enhance user details",
+        description="Re-run AI enhancement if user data was updated (e.g., new skills, education, etc.)"
+    )
+    def put(self, request):
+        """
+        Re-runs AI enhancement when user updates details.
+        """
+        try:
+            user = request.user
+            serializer = UserDetailSerializer(user)
+            original_data = dict(serializer.data)
+
+            # Clean and enhance again
+            cleaned_data = clean_user_data_with_ai(original_data)
+            enhanced_data = enhance_cv_data(cleaned_data)
+
+            # Save new enhanced data
+            user.enhanced_data = enhanced_data
+            user.save(update_fields=['enhanced_data'])
+
+            return Response({
+                "message": "AI-enhanced data updated successfully.",
+                "enhanced_data": enhanced_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                "error": f"Failed to update enhanced data: {str(e)}"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+          
         
 class AdminUserListView(APIView):
     """
@@ -287,3 +313,63 @@ class AdminUserListView(APIView):
         users = UserTB.objects.all()  # Fetch all users
         serializer = UserDetailSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class GoogleAuthView(APIView):
+    """
+    Handles Google Sign-Up and Sign-In.
+    Automatically logs in newly created users.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({"message": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verify Google token
+            idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
+            email = idinfo.get("email")
+            first_name = idinfo.get("given_name")
+            last_name = idinfo.get("family_name")
+
+            # Create or get user
+            user, created = UserTB.objects.get_or_create(
+                email=email,
+                defaults={
+                    "email": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "is_active": True,
+                }
+            )
+
+            # Only run AI enhancement if user has existing CV data
+            enhanced_data = getattr(user, 'enhanced_data', None)
+            if created or not enhanced_data:
+                # New user or no existing enhanced_data
+                enhanced_data = {}  # skip AI enhancement for now
+
+            # Create JWT tokens
+            refresh = RefreshToken.for_user(user)
+
+            # Serialize user data safely
+            user_data = UserDetailSerializer(
+                user,
+                context={'enhanced_data': enhanced_data}
+            ).data
+
+            return Response(
+                {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                    "email": user.email,
+                    "user": user_data
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except ValueError:
+            return Response({"message": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)

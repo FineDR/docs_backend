@@ -3,7 +3,7 @@ import dj_database_url
 import os
 import environ
 from dotenv import load_dotenv
-
+from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- Load .env ---
@@ -11,6 +11,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 env = environ.Env(
     DJANGO_DEBUG=(bool, False)
 )
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # --- Security ---
@@ -94,7 +95,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "drf_api.urls"
 WSGI_APPLICATION = "drf_api.wsgi.application"
-
+AUTH_USER_MODEL = "api.UserTB"
 # --- Database ---
 if env("DATABASE_URL", default=None):
     DATABASES = {
@@ -139,7 +140,13 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ),
 }
-
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 SPECTACULAR_SETTINGS = {
     "TITLE": "It Is Possible API",
     "DESCRIPTION": "Comprehensive API documentation for It Is Possible.",

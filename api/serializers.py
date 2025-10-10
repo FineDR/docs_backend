@@ -46,7 +46,6 @@ class CertificateSerializer(serializers.ModelSerializer):
         model = Certificate
         fields = "__all__"
 
-
 class ProfileSerializer(serializers.ModelSerializer):
     certificates = CertificateSerializer(many=True, read_only=True)
 
@@ -124,7 +123,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
     personal_details = PersonalDetailSerializer(
         read_only=True, source='personal_detail'
     )
-    profiles = ProfileSerializer(read_only=True, source='profile')
+    profile = ProfileSerializer(read_only=True)
+
     educations = EducationSerializer(many=True, read_only=True)
     languages = LanguageSerializer(many=True, read_only=True)
     skill_sets = SkillSetSerializer(many=True, read_only=True)
@@ -153,7 +153,7 @@ class UserTBSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserTB
-        fields = ["email", "first_name", "middle_name", "last_name", "password", "confirm_password"]
+        fields = ["email", "first_name", "middle_name", "last_name", "password","enhanced_data", "confirm_password"]
         extra_kwargs = {
             "password": {"write_only": True},
         }
