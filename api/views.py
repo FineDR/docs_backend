@@ -112,9 +112,6 @@ class VerifyEmailView(APIView):
             return Response({"error": "User does not exist"}, status=400)
 
 class UserLoginView(APIView):
-    """
-    API for user login.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -123,21 +120,21 @@ class UserLoginView(APIView):
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
 
+            # Always pass a dict for enhanced_data
             user_data = UserDetailSerializer(
                 user,
-                context={'enhanced_data': getattr(user, 'enhanced_data', None)}
+                context={'enhanced_data': user.enhanced_data or {}}
             ).data
-            return Response(
-                {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "email": user.email,
-                    "user":user_data
-                    
-                },
-                status=status.HTTP_200_OK
-            )
+
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "email": user.email,
+                "user": user_data
+            }, status=status.HTTP_200_OK)
+
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 class LogoutView(APIView):
@@ -227,30 +224,23 @@ class UserDetailView(APIView):
         description="Get the details of the authenticated user."
     )
     def get(self, request):
-        """
-        Returns AI-enhanced user details.
-        If not yet enhanced, triggers enhancement automatically.
-        """
         try:
             user = request.user
 
-            # If AI-enhanced data already exists
-            if user.enhanced_data:
-                serializer = UserDetailSerializer(
-                    user,
-                    context={'enhanced_data': user.enhanced_data}
-                )
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            # Always ensure enhanced_data is a dict
+            enhanced_data = user.enhanced_data or {}
 
-            # Otherwise, generate it now
-            serializer = UserDetailSerializer(user)
-            original_data = dict(serializer.data)
+            # If no enhanced_data yet, generate it
+            if not enhanced_data:
+                serializer = UserDetailSerializer(user)
+                original_data = dict(serializer.data)
 
-            cleaned_data = clean_user_data_with_ai(original_data)
-            enhanced_data = enhance_cv_data(cleaned_data)
+                cleaned_data = clean_user_data_with_ai(original_data)
+                enhanced_data = enhance_cv_data(cleaned_data)
 
-            user.enhanced_data = enhanced_data
-            user.save(update_fields=['enhanced_data'])
+                user.enhanced_data = enhanced_data
+                user.save(update_fields=['enhanced_data'])
+                user.refresh_from_db()
 
             serializer = UserDetailSerializer(user, context={'enhanced_data': enhanced_data})
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -269,21 +259,17 @@ class UserDetailView(APIView):
         description="Re-run AI enhancement if user data was updated (e.g., new skills, education, etc.)"
     )
     def put(self, request):
-        """
-        Re-runs AI enhancement when user updates details.
-        """
         try:
             user = request.user
             serializer = UserDetailSerializer(user)
             original_data = dict(serializer.data)
 
-            # Clean and enhance again
             cleaned_data = clean_user_data_with_ai(original_data)
             enhanced_data = enhance_cv_data(cleaned_data)
 
-            # Save new enhanced data
             user.enhanced_data = enhanced_data
             user.save(update_fields=['enhanced_data'])
+            user.refresh_from_db()
 
             return Response({
                 "message": "AI-enhanced data updated successfully.",
@@ -295,7 +281,6 @@ class UserDetailView(APIView):
                 "error": f"Failed to update enhanced data: {str(e)}"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-          
         
 class AdminUserListView(APIView):
     """
@@ -317,10 +302,6 @@ class AdminUserListView(APIView):
 
 
 class GoogleAuthView(APIView):
-    """
-    Handles Google Sign-Up and Sign-In.
-    Automatically logs in newly created users.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -329,13 +310,11 @@ class GoogleAuthView(APIView):
             return Response({"message": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify Google token
             idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
             email = idinfo.get("email")
             first_name = idinfo.get("given_name")
             last_name = idinfo.get("family_name")
 
-            # Create or get user
             user, created = UserTB.objects.get_or_create(
                 email=email,
                 defaults={
@@ -346,30 +325,23 @@ class GoogleAuthView(APIView):
                 }
             )
 
-            # Only run AI enhancement if user has existing CV data
-            enhanced_data = getattr(user, 'enhanced_data', None)
-            if created or not enhanced_data:
-                # New user or no existing enhanced_data
-                enhanced_data = {}  # skip AI enhancement for now
+            # Ensure enhanced_data is always a dict
+            enhanced_data = user.enhanced_data or {}
 
-            # Create JWT tokens
             refresh = RefreshToken.for_user(user)
 
-            # Serialize user data safely
             user_data = UserDetailSerializer(
                 user,
                 context={'enhanced_data': enhanced_data}
             ).data
 
-            return Response(
-                {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "email": user.email,
-                    "user": user_data
-                },
-                status=status.HTTP_200_OK
-            )
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "email": user.email,
+                "user": user_data
+            }, status=status.HTTP_200_OK)
 
         except ValueError:
             return Response({"message": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+

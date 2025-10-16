@@ -23,14 +23,26 @@ class CareerObjectiveView(APIView):
     @extend_schema(
         request=CareerObjectiveSerializer,
         responses=CareerObjectiveSerializer,
-        summary="Create a career objective"
+        summary="Create or replace a single career objective"
     )
     def post(self, request):
-        serializer = CareerObjectiveSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        data = request.data
+
+        # Try to get existing career objective
+        obj, created = CareerObjective.objects.update_or_create(
+            user=user,
+            defaults=data
+        )
+
+        serializer = CareerObjectiveSerializer(obj)
+        message = "Career objective created successfully" if created else "Career objective updated successfully"
+
+        return Response(
+            {"message": message, "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
+
 
     # PUT to update a single career objective by ID
     @extend_schema(

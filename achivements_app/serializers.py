@@ -15,8 +15,12 @@ class AchievementProfileSerializer(serializers.ModelSerializer):
         fields = ["full_name", "email", "achievements"]
 
     def create(self, validated_data):
+        """
+        Append new achievements (do not delete existing ones)
+        """
         achievements_data = validated_data.pop("achievements", [])
         user = self.context["request"].user
+
         profile, _ = AchievementProfile.objects.get_or_create(
             user=user,
             defaults={
@@ -25,21 +29,24 @@ class AchievementProfileSerializer(serializers.ModelSerializer):
             },
         )
 
-        profile.achievements.all().delete()
+        # ✅ Append new achievements (no deletion)
         for ach_data in achievements_data:
             Achievement.objects.create(profile=profile, **ach_data)
 
         return profile
 
     def update(self, instance, validated_data):
+        """
+        Replace all achievements (delete old ones first)
+        """
         achievements_data = validated_data.pop("achievements", [])
         instance.full_name = validated_data.get("full_name", instance.full_name)
         instance.email = validated_data.get("email", instance.email)
         instance.save()
 
-        if achievements_data:
-            instance.achievements.all().delete()
-            for ach_data in achievements_data:
-                Achievement.objects.create(profile=instance, **ach_data)
+        # ✅ Replace mode — clear all and recreate
+        instance.achievements.all().delete()
+        for ach_data in achievements_data:
+            Achievement.objects.create(profile=instance, **ach_data)
 
         return instance

@@ -30,7 +30,7 @@ class ReferenceView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # bulk create
-        Reference.objects.filter(user=user).delete()
+        # Reference.objects.filter(user=user).delete()
         serializer = ReferenceSerializer(data=data, many=True)
         if serializer.is_valid():
             serializer.save(user=user)
@@ -77,12 +77,29 @@ class ReferenceView(APIView):
 
         # bulk update
         data = request.data.get('references', [])
-        Reference.objects.filter(user=user).delete()
-        serializer = ReferenceSerializer(data=data, many=True)
-        if serializer.is_valid():
-            serializer.save(user=user)
-            return Response({"message": "References updated successfully", "data": serializer.data})
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        response_data = []
+
+        for item in data:
+            ref_id = item.get("id")
+            if ref_id:
+                # update existing reference
+                try:
+                    ref = Reference.objects.get(user=user, pk=ref_id)
+                    serializer = ReferenceSerializer(ref, data=item, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        response_data.append(serializer.data)
+                except Reference.DoesNotExist:
+                    continue
+            else:
+                # create new reference
+                serializer = ReferenceSerializer(data=item)
+                if serializer.is_valid():
+                    serializer.save(user=user)
+                    response_data.append(serializer.data)
+
+        return Response({"message": "References updated successfully", "data": response_data}, status=status.HTTP_200_OK)
+
 
     @extend_schema(
         responses={200: None},
