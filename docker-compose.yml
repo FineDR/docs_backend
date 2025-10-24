@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: doc_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - doc_network
+
+  web:
+    build: .
+    container_name: doc_backend
+    command: gunicorn drf_api.wsgi:application --bind 0.0.0.0:8000
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - static_volume:/app/staticfiles
+    networks:
+      - doc_network
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: doc_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles
+      - ./certs:/etc/ssl/certs
+    depends_on:
+      - web
+    networks:
+      - doc_network
+
+networks:
+  doc_network:
+
+volumes:
+  postgres_data:
+  static_volume:

@@ -12,11 +12,14 @@ class GenerateLetterAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Accept raw letter fields, return AI-cleaned professional letter.
+        Accept letter fields, return AI-cleaned professional letter body.
         """
         data = request.data
+        # Inject user info if needed
+        data.setdefault("sender", request.user.get_full_name())
         ai_response = generate_clean_letter(data)
         return Response(ai_response, status=status.HTTP_200_OK)
+
 
 
 class LetterListCreateAPIView(APIView):

@@ -127,7 +127,7 @@ STRIPE_TEST_API_KEY = env("STRIPE_TEST_API_KEY", default="")
 STRIPE_TEST_SECRET_KEY = env("STRIPE_TEST_SECRET_KEY", default="")
 
 # --- OpenRouter ---
-OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default="")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # --- DRF / JWT ---
 REST_FRAMEWORK = {

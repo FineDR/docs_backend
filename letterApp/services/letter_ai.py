@@ -1,99 +1,131 @@
 import json
 import re
 from api.services.ai_service import make_ai_call, extract_json_from_text, merge_dicts, AI_AVAILABLE
+from django.conf import settings
 
 
 def generate_clean_letter(data: dict) -> dict:
     """
-    Generate a professional letter with AI or a fallback template.
-    Ensures all relevant information (recipient, purpose, sender) is included
-    while keeping content clean of placeholders and sender name.
+    Generate a professional letter body using AI (or fallback template),
+    supporting both English and Swahili (lang field).
     """
-    sender_name = data.get("sender_name", "").strip()
-    sender_email = data.get("sender_email", "").strip()
-    sender_phone = data.get("sender_phone", "").strip()
-    recipient_title = data.get("recipient_title", "").strip()
+
+    # Extract fields
+    sender_name = data.get("sender", "").strip()
+    sender_title = data.get("senderTitle", "").strip()
+    sender_address = data.get("senderAddress", "").strip()
     recipient_name = data.get("recipient", "").strip()
-    purpose = data.get("purpose", "").strip()
-    additional_context = data.get("context", "").strip()  # optional extra info
+    recipient_title = data.get("recipientTitle", "").strip()
+    recipient_address = data.get("recipientAddress", "").strip()
+    subject = data.get("subject", "").strip()
+    content = data.get("content", "").strip()
+    closing = data.get("closing", "").strip()
+    lang = data.get("lang", "en")
+    date = data.get("date", "")
 
-    if not AI_AVAILABLE:
-        # fallback mode
-        subject = f"Application: {purpose.capitalize()}" if purpose else "Letter"
-        recipient_address = data.get("recipient_address", "")
-
-        # Construct a simple body including context if provided
-        content_lines = [
-            f"Dear {recipient_title} {recipient_name},".strip(),
-            f"I am writing regarding {purpose}." if purpose else "I am writing to you.",
-        ]
-        if additional_context:
-            content_lines.append(f"{additional_context.strip()}")
-        content_lines.append("Please consider this as my formal communication.")
-        content = "\n\n".join(content_lines).strip()
-
-        closing_line = "Sincerely,"
-        if sender_name:
-            closing_line += f" {sender_name}"
+    # Fallback template
+    def fallback_letter():
+        nonlocal subject, content, closing
+        if not subject:
+            subject = "Maombi" if lang == "sw" else "Application"
+        if not content:
+            if lang == "sw":
+                content_lines = [
+                    f"Halo {recipient_title} {recipient_name},",
+                    "Ninaandika kuhusiana na jambo lililotajwa.",
+                    "Tafadhali zingatia kama mawasiliano yangu rasmi."
+                ]
+            else:
+                content_lines = [
+                    f"Dear {recipient_title} {recipient_name},",
+                    "I am writing regarding the above matter.",
+                    "Please consider this as my formal communication."
+                ]
+            content = "\n\n".join(content_lines).strip()
+        if not closing:
+            closing = f"Kwa dhati, {sender_name}" if lang == "sw" and sender_name else f"Sincerely, {sender_name}" if sender_name else "Sincerely,"
 
         return {
-            "subject": subject,
+            "recipient": recipient_name,
+            "recipientTitle": recipient_title,
             "recipientAddress": recipient_address,
+            "sender": sender_name,
+            "senderTitle": sender_title,
+            "senderAddress": sender_address,
+            "date": date,
+            "subject": subject,
             "content": content,
-            "closing": closing_line,
+            "closing": closing,
+            "senderSignature": data.get("senderSignature", None),
+            "lang": lang,
+            "alignContact": data.get("alignContact", "start")
         }
 
-    # AI mode
-    prompt = f"""
-    You are a professional letter writer. Using the user input, generate a polished,
-    polite, professional letter in JSON format.
+    # Get API key from settings
+    api_key = getattr(settings, "OPENROUTER_API_KEY", None)
+    if not AI_AVAILABLE or not api_key:
+        return fallback_letter()
 
+    # AI prompt
+    prompt = f"""
+    You are a professional letter writer. Using the user input below, generate a polished, professional letter in JSON format.
     Requirements:
-    - Include subject, recipientAddress, content, and closing
-    - Use all provided information: recipient title, recipient name, purpose, context
-    - Do NOT include closing phrases or sender name inside content
-    - Closing should include sender name if provided
+    - Include all Letter fields: subject, recipientAddress, content, closing, sender, date, etc.
+    - Use provided information: recipientTitle, recipientName, senderName, senderTitle, purpose, context.
+    - Do NOT include closing phrases or sender name inside content.
     - Clean content: remove placeholders like [Your Name], [senderName], etc.
-    - Return ONLY valid JSON
+    - Write in Kiswahili if lang='sw', otherwise English.
+    - Return ONLY valid JSON corresponding to the Letter interface.
 
     User Input:
     {json.dumps(data, indent=2)}
     """
 
     try:
-        response_text = make_ai_call(prompt)
+        # Call AI with the API key
+        response_text = make_ai_call(prompt, api_key=api_key)
         if not response_text:
-            return data
+            return fallback_letter()
 
         cleaned_data = extract_json_from_text(response_text) or {}
 
         # Ensure closing exists
-        if "closing" not in cleaned_data or not cleaned_data["closing"]:
-            cleaned_data["closing"] = f"Sincerely, {sender_name}" if sender_name else "Sincerely,"
+        if not cleaned_data.get("closing"):
+            cleaned_data["closing"] = f"Kwa dhati, {sender_name}" if lang == "sw" else f"Sincerely, {sender_name}" if sender_name else "Sincerely,"
 
-        # Clean content from placeholders and sender info
+        # Clean AI content
         if "content" in cleaned_data and cleaned_data["content"]:
-            content = cleaned_data["content"]
-            # Remove closing phrases
-            content = re.sub(r"\b(Sincerely|Yours faithfully|Yours sincerely|Best regards),?\b", "", content, flags=re.IGNORECASE)
-            # Remove sender name
+            c = cleaned_data["content"]
+            if lang == "sw":
+                c = re.sub(r"\b(Kwa dhati|Wako mwaminifu|Wako kwa heshima),?\b", "", c, flags=re.IGNORECASE)
+            else:
+                c = re.sub(r"\b(Sincerely|Yours faithfully|Yours sincerely|Best regards),?\b", "", c, flags=re.IGNORECASE)
             if sender_name:
-                content = re.sub(re.escape(sender_name), "", content, flags=re.IGNORECASE)
-            # Remove bracketed placeholders
-            content = re.sub(r"\[[^\]]+\]", "", content)
-            # Remove extra whitespace
-            content = re.sub(r"\s{2,}", " ", content)
-            content = re.sub(r",\s*,", ",", content)
-            content = content.strip()
-            cleaned_data["content"] = content
+                c = re.sub(re.escape(sender_name), "", c, flags=re.IGNORECASE)
+            c = re.sub(r"\[[^\]]+\]", "", c)
+            c = re.sub(r"\s{2,}", " ", c)
+            c = re.sub(r",\s*,", ",", c)
+            cleaned_data["content"] = c.strip()
 
-        return merge_dicts(data, cleaned_data)
+        # Merge AI output with original fields
+        final_letter = merge_dicts({
+            "recipient": recipient_name,
+            "recipientTitle": recipient_title,
+            "recipientAddress": recipient_address,
+            "sender": sender_name,
+            "senderTitle": sender_title,
+            "senderAddress": sender_address,
+            "date": date,
+            "subject": subject,
+            "content": content,
+            "closing": closing,
+            "senderSignature": data.get("senderSignature", None),
+            "lang": lang,
+            "alignContact": data.get("alignContact", "start")
+        }, cleaned_data)
+
+        return final_letter
 
     except Exception as e:
         print(f"Letter AI error: {e}")
-        return {
-            "subject": data.get("purpose", "Letter"),
-            "recipientAddress": data.get("recipient_address", ""),
-            "content": "An error occurred while generating the letter.",
-            "closing": f"Sincerely, {sender_name}" if sender_name else "Sincerely,",
-        }
+        return fallback_letter()

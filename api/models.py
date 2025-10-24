@@ -49,6 +49,10 @@ class UserTB(AbstractBaseUser, PermissionsMixin):
     def __str__(self) -> str:
         return self.email
 
+# models.py, your UserTB model
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
 
 """
 ### Guide to Adding More Fields to the Custom User Model:
