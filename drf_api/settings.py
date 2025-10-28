@@ -4,6 +4,8 @@ import os
 import environ
 from dotenv import load_dotenv
 from datetime import timedelta
+from corsheaders.defaults import default_headers
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- Load .env ---
@@ -11,12 +13,11 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 env = environ.Env(
     DJANGO_DEBUG=(bool, False)
 )
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # --- Security ---
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-fallback")
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 # --- Hosts ---
 ALLOWED_HOSTS = env.list(
@@ -27,21 +28,23 @@ ALLOWED_HOSTS = env.list(
 # --- Frontend ---
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
+# --- CORS & CSRF ---
 CORS_ALLOWED_ORIGINS = [
+    "https://docs.twendedigital.tech",
     "http://localhost:5173",
-    "https://kululinda.pythonanywhere.com",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://docs.twendedigital.tech",
+    "http://localhost:5173"
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "https://kululinda.pythonanywhere.com",
-]
 
 CORS_ALLOW_CREDENTIALS = True
-
+CORS_ALLOW_HEADERS = list(default_headers)
 
 # --- Installed Apps ---
 INSTALLED_APPS = [
+    "corsheaders",  # Must be before Django apps
     "grappelli",
     "grappelli.dashboard",
     "django.contrib.admin",
@@ -76,7 +79,6 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
-    "corsheaders",
     "drf_yasg",
     "drf_spectacular",
 ]
@@ -94,9 +96,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# --- URLs & WSGI ---
 ROOT_URLCONF = "drf_api.urls"
 WSGI_APPLICATION = "drf_api.wsgi.application"
 AUTH_USER_MODEL = "api.UserTB"
+
 # --- Database ---
 if env("DATABASE_URL", default=None):
     DATABASES = {
@@ -109,9 +113,6 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
-# --- Custom user ---
-AUTH_USER_MODEL = "api.UserTB"
 
 # --- Email ---
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
@@ -128,6 +129,7 @@ STRIPE_TEST_SECRET_KEY = env("STRIPE_TEST_SECRET_KEY", default="")
 
 # --- OpenRouter ---
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GOOGLE_CLIENT_ID = os.getenv("VITE_GOOGLE_CLIENT_ID")
 
 # --- DRF / JWT ---
 REST_FRAMEWORK = {
@@ -141,6 +143,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ),
 }
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -148,6 +151,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "It Is Possible API",
     "DESCRIPTION": "Comprehensive API documentation for It Is Possible.",
@@ -173,32 +177,6 @@ TEMPLATES = [
         },
     },
 ]
-
-# --- Grappelli ---
-GRAPPELLI_INDEX_DASHBOARD = "api.dashboard.CustomIndexDashboard"
-GRAPPELLI_ADMIN_TITLE = "It Is Possible Admin Dashboard"
-
-# --- Password validators ---
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
-
-# --- Logging ---
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'loggers': {'django.db.backends': {'handlers': ['console'], 'level': 'DEBUG'}},
-}
-
-# --- Internationalization ---
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
 
 # --- Static & media ---
 STATIC_URL = "/static/"

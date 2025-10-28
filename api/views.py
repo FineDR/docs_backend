@@ -299,49 +299,69 @@ class AdminUserListView(APIView):
         serializer = UserDetailSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
-
 class GoogleAuthView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         token = request.data.get("token")
         if not token:
-            return Response({"message": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Token is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
+            # Verify Google token
             idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
             email = idinfo.get("email")
             first_name = idinfo.get("given_name")
             last_name = idinfo.get("family_name")
 
-            user, created = UserTB.objects.get_or_create(
-                email=email,
-                defaults={
-                    "email": email,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "is_active": True,
-                }
-            )
+            if not email:
+                return Response(
+                    {"message": "Email not found in Google token"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if user already exists
+            try:
+                user = UserTB.objects.get(email=email)
+                created = False
+            except UserTB.DoesNotExist:
+                user = UserTB.objects.create(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=True
+                )
+                created = True
 
             # Ensure enhanced_data is always a dict
             enhanced_data = user.enhanced_data or {}
 
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
+            access = str(refresh.access_token)
 
-            user_data = UserDetailSerializer(
-                user,
-                context={'enhanced_data': enhanced_data}
-            ).data
+            # Serialize user
+            user_data = UserDetailSerializer(user, context={'enhanced_data': enhanced_data}).data
 
             return Response({
                 "refresh": str(refresh),
-                "access": str(refresh.access_token),
+                "access": access,
                 "email": user.email,
-                "user": user_data
+                "user": user_data,
+                "is_new_user": created  # <-- indicate if user is newly created
             }, status=status.HTTP_200_OK)
 
         except ValueError:
-            return Response({"message": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(
+                {"message": "Invalid Google token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            # Catch all other unexpected errors
+            return Response(
+                {"message": f"Internal server error: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
