@@ -19,12 +19,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-fallback")
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # --- Hosts ---
-ALLOWED_HOSTS = env.list(
-    "DJANGO_ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1"]
-)
-
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api.twendedigital.tech"]
 # --- Frontend ---
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
