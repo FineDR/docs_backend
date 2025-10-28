@@ -1,7 +1,6 @@
 # Use official Python slim image
 FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -14,17 +13,16 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first (for caching)
 COPY requirements.txt .
 
-# Upgrade pip and install dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # Copy the rest of the project
 COPY . .
 
-# Collect static files to /app/staticfiles
+# Collect static files
 RUN python manage.py collectstatic --noinput
 
-# Expose port 8000
+# Expose internal port (Gunicorn)
 EXPOSE 8000
 
 # Use Gunicorn for production
