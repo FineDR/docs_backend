@@ -1,6 +1,14 @@
 version: "3.9"
 
 services:
+  doc_backend:
+    restart: always
+  doc_db:
+    restart: always
+  doc_nginx:
+    restart: always
+  doc_certbot:
+    restart: always
   db:
     image: postgres:16
     container_name: doc_db
