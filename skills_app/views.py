@@ -19,8 +19,7 @@ class SkillSetView(APIView):
     def post(self, request):
         serializer = SkillSetSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            # ✅ Remove user=request.user here, serializer handles it
-            serializer.save()
+            serializer.save()  # user inachukuliwa na serializer
             return Response(
                 {"message": "Skills submitted successfully", "data": serializer.data},
                 status=status.HTTP_201_CREATED
@@ -28,7 +27,7 @@ class SkillSetView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        responses=SkillSetSerializer,
+        responses=SkillSetSerializer(many=True),
         summary="Get all skill sets for authenticated user"
     )
     def get(self, request):
@@ -65,8 +64,7 @@ class SkillSetDetailView(APIView):
             return Response({"error": "SkillSet not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = SkillSetSerializer(skill_set, data=request.data, context={"request": request})
         if serializer.is_valid():
-            # ✅ Remove user=request.user here too
-            serializer.save()
+            serializer.save()  # user inapewa serializer context
             return Response({"message": "Skills updated successfully", "data": serializer.data})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -3,6 +3,7 @@ from .models import Profile, Certificate
 
 class CertificateSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
+    profile = serializers.PrimaryKeyRelatedField(read_only=True)  # ✅ Make profile read-only
 
     class Meta:
         model = Certificate
@@ -19,8 +20,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         certificates_data = validated_data.pop('certificates', [])
         profile = Profile.objects.create(**validated_data)
+
         for cert_data in certificates_data:
-            cert_data.pop('profile', None)  # ✅ prevent duplicate profile
+            # Profile is set automatically
             Certificate.objects.create(profile=profile, **cert_data)
         return profile
 
@@ -33,12 +35,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         if certificates_data is not None:
-            # Map existing certificates by id for easy access
             existing_certs = {c.id: c for c in instance.certificates.all()}
 
             for cert_data in certificates_data:
-                cert_data.pop('profile', None)  # ✅ remove profile if present
-                cert_id = cert_data.pop("id", None)
+                cert_id = cert_data.pop('id', None)
 
                 if cert_id and cert_id in existing_certs:
                     # Update existing certificate

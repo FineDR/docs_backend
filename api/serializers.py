@@ -141,110 +141,57 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = UserTB
         exclude = ['password']
 
-def to_representation(self, instance):
-    data = super().to_representation(instance)
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
 
-    # Helper to format phone numbers consistently
-    def format_phone(phone):
-        if not phone:
-            return ""
-        phone = phone.replace(" ", "").replace("+", "")
-        if phone.startswith("255"):
-            return "+255 " + " ".join([phone[3:6], phone[6:9], phone[9:]])
-        return phone
+        # ---------------- Helpers ----------------
+        def safe_title(value):
+            return value.title() if value else ""
 
-    # Flatten and convert the CV to the target structure
-    cv = {
-        "id": int(instance.id),
-        "full_name": f"{instance.first_name} {instance.middle_name} {instance.last_name}".title(),
-        "first_name": instance.first_name.title(),
-        "middle_name": instance.middle_name.title(),
-        "last_name": instance.last_name.title(),
-        "email": instance.email,
-        "phone": format_phone(data.get("personal_details", {}).get("phone", "")),
-        "address": data.get("personal_details", {}).get("address", "").replace(",", ", "),
-        "website": data.get("personal_details", {}).get("website", ""),
-        "linkedin": data.get("personal_details", {}).get("linkedin", ""),
-        "github": data.get("personal_details", {}).get("github", ""),
-        "nationality": data.get("personal_details", {}).get("nationality", ""),
-        "date_of_birth": data.get("personal_details", {}).get("date_of_birth", ""),
-        "profile_summary": data.get("personal_details", {}).get("profile_summary", ""),
-        "career_objective": data.get("career_objectives")[0]["career_objective"]
-                            if data.get("career_objectives") else "",
+        def format_phone(phone):
+            if not phone:
+                return ""
+            phone = phone.replace(" ", "").replace("+", "")
+            if phone.startswith("255") and len(phone) >= 12:
+                return "+255 " + " ".join([phone[3:6], phone[6:9], phone[9:]])
+            return phone
 
-        "educations": [
-            {
-                "degree": e["degree"],
-                "institution": e["institution"],
-                "start_date": e["start_date"],
-                "end_date": e["end_date"],
-                "grade": e["grade"],
-                "location": e["location"].replace(",", ", ")
-            } for e in data.get("educations", [])
-        ],
+        # Extract personal details
+        pd = data.get("personal_details") or {}
 
-        "certificates": [
-            {
-                "name": c["name"],
-                "issuer": c["issuer"],
-                "date": c["date"]
-            } for c in data.get("profile", {}).get("certificates", [])
-        ],
+        # ---------------- Nested enhanced_data ----------------
+        enhanced_data = {
+            "id": int(instance.id),
+            "full_name": f"{safe_title(instance.first_name)} {safe_title(instance.middle_name)} {safe_title(instance.last_name)}".strip(),
+            "first_name": safe_title(instance.first_name),
+            "middle_name": safe_title(instance.middle_name),
+            "last_name": safe_title(instance.last_name),
+            "email": instance.email or "",
+            "personal_details": {**pd, "phone": format_phone(pd.get("phone", ""))},
+            "career_objectives": data.get("career_objectives", []),
+            "educations": data.get("educations", []),
+            # Include certificates in proper nested structure
+            "profile": {
+                **data.get("profile", {}),
+                "certificates": data.get("profile", {}).get("certificates", [])
+            },
+            # Include achievement profile properly nested
+            "achievement_profile": {
+                **data.get("achievement_profile", {}),
+                "achievements": data.get("achievement_profile", {}).get("achievements", [])
+            },
+            "work_experiences": data.get("work_experiences", []),
+            "projects": data.get("projects", []),
+            "skill_sets": data.get("skill_sets", []),
+            "languages": data.get("languages", []),
+            "references": [
+                {**r, "phone": format_phone(r.get("phone", ""))}
+                for r in data.get("references", [])
+            ],
+        }
 
-        "work_experiences": [
-            {
-                "company": w["company"],
-                "location": w["location"].replace(",", ", "),
-                "job_title": w["job_title"].title(),
-                "start_date": w["start_date"],
-                "end_date": w["end_date"],
-                "responsibilities": [
-                    r["value"].rstrip(".").capitalize() + "." for r in w.get("responsibilities", [])
-                ]
-            } for w in data.get("work_experiences", [])
-        ],
-
-        "projects": [
-            {
-                "title": p["title"],
-                "description": p["description"],
-                "link": p.get("link", ""),
-                "technologies": [t["value"] for t in p.get("technologies", [])]
-            } for p in data.get("projects", [])
-        ],
-
-        "technical_skills": [
-            t["value"] for s in data.get("skill_sets", []) for t in s.get("technical_skills", [])
-        ],
-
-        "soft_skills": [
-            s["value"] for s in data.get("skill_sets", []) for s in s.get("soft_skills", [])
-        ],
-
-        "achievements": [
-            a["value"].rstrip(".").capitalize() + "." for a in data.get("achievement_profile", {}).get("achievements", [])
-        ],
-
-        "languages": [
-            {"language": l["language"], "proficiency": l["proficiency"]}
-            for l in data.get("languages", [])
-        ],
-
-        "references": [
-            {
-                "name": r["name"],
-                "position": r.get("position", ""),
-                "email": r.get("email", ""),
-                "phone": format_phone(r.get("phone", ""))
-            } for r in data.get("references", [])
-        ]
-    }
-
-    # Make enhanced_data equal to the flattened CV
-    data["enhanced_data"] = cv
-
-    return cv
-
+        data["enhanced_data"] = enhanced_data
+        return data
 
 # ------------------- User Registration Serializer -------------------
 

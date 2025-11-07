@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from .models import Language
 from .serializers import LanguageSerializer
+from django.db import transaction
 
 class LanguageView(APIView):
     permission_classes = [IsAuthenticated]
@@ -16,24 +17,33 @@ class LanguageView(APIView):
         description="Authenticated users can submit multiple language entries at once"
     )
     def post(self, request):
-        user = request.user
-        languages = request.data.get("languages", [])
+        languages_data = request.data.get("languages")
+        
+        # Support single language object
+        if not languages_data:
+            if "language" in request.data and "proficiency" in request.data:
+                languages_data = [request.data.copy()]
+            else:
+                return Response({"error": "No languages provided"}, status=status.HTTP_400_BAD_REQUEST)
+
         created_entries = []
 
-        for lang in languages:
-            serializer = LanguageSerializer(data=lang, context={'request': request})
+        for idx, lang_data in enumerate(languages_data):
+            serializer = LanguageSerializer(data=lang_data, context={"request": request})
             if serializer.is_valid():
-                # Attach the authenticated user here
-                serializer.save(user=user)
-                created_entries.append(serializer.data)
+                with transaction.atomic():
+                    instance = serializer.save()  # user is set automatically
+                created_entries.append(LanguageSerializer(instance).data)
             else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": f"Language #{idx} invalid", "details": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         return Response(
             {"message": "Languages submitted successfully", "data": created_entries},
             status=status.HTTP_201_CREATED
         )
-
     @extend_schema(
         responses=LanguageSerializer,
         summary="Get all language records for authenticated user"

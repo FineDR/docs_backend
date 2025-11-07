@@ -30,6 +30,19 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 # User = settings.AUTH_USER_MODEL
+def ensure_user_enhanced_data(user):
+    if not user.enhanced_data:
+        try:
+            serializer = UserDetailSerializer(user)
+            enhanced = serializer.data.get("enhanced_data", {})
+            user.enhanced_data = enhanced
+            user.save(update_fields=['enhanced_data'])
+        except Exception as e:
+            logger.error(f"Failed to generate enhanced_data for user {user.email}: {e}")
+            user.enhanced_data = {}
+            user.save(update_fields=['enhanced_data'])
+    return user.enhanced_data or {}
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -110,7 +123,7 @@ class VerifyEmailView(APIView):
             return Response({"error": "Invalid token"}, status=400)
         except UserTB.DoesNotExist:
             return Response({"error": "User does not exist"}, status=400)
-
+        
 class UserLoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -120,11 +133,10 @@ class UserLoginView(APIView):
             user = serializer.validated_data["user"]
             refresh = RefreshToken.for_user(user)
 
-            # Always pass a dict for enhanced_data
-            user_data = UserDetailSerializer(
-                user,
-                context={'enhanced_data': user.enhanced_data or {}}
-            ).data
+            # Use helper to populate enhanced_data
+            enhanced_data = ensure_user_enhanced_data(user)
+
+            user_data = UserDetailSerializer(user, context={'enhanced_data': enhanced_data}).data
 
             return Response({
                 "refresh": str(refresh),
@@ -134,6 +146,7 @@ class UserLoginView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 
@@ -305,25 +318,25 @@ class GoogleAuthView(APIView):
     def post(self, request):
         token = request.data.get("token")
         if not token:
-            return Response(
-                {"message": "Token is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"message": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify Google token
-            idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
+            # Step 1: Verify Google token
+            try:
+                idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
+                logger.info(f"Google token verified: {idinfo}")
+            except ValueError as ve:
+                logger.error(f"Google token verification failed: {ve}")
+                return Response({"message": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+
             email = idinfo.get("email")
-            first_name = idinfo.get("given_name")
-            last_name = idinfo.get("family_name")
+            first_name = idinfo.get("given_name") or ""
+            last_name = idinfo.get("family_name") or ""
 
             if not email:
-                return Response(
-                    {"message": "Email not found in Google token"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"message": "Email not found in Google token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if user already exists
+            # Step 2: Get or create user
             try:
                 user = UserTB.objects.get(email=email)
                 created = False
@@ -336,14 +349,15 @@ class GoogleAuthView(APIView):
                 )
                 created = True
 
-            # Ensure enhanced_data is always a dict
-            enhanced_data = user.enhanced_data or {}
+            # Step 3: Ensure enhanced_data
+            enhanced_data = ensure_user_enhanced_data(user)
+            logger.info(f"Enhanced data generated for user {email}")
 
-            # Generate JWT tokens
+            # Step 4: Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             access = str(refresh.access_token)
 
-            # Serialize user
+            # Step 5: Serialize user
             user_data = UserDetailSerializer(user, context={'enhanced_data': enhanced_data}).data
 
             return Response({
@@ -351,16 +365,11 @@ class GoogleAuthView(APIView):
                 "access": access,
                 "email": user.email,
                 "user": user_data,
-                "is_new_user": created  # <-- indicate if user is newly created
+                "is_new_user": created
             }, status=status.HTTP_200_OK)
 
-        except ValueError:
-            return Response(
-                {"message": "Invalid Google token"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
         except Exception as e:
-            # Catch all other unexpected errors
+            logger.exception(f"Google auth failed: {str(e)}")
             return Response(
                 {"message": f"Internal server error: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

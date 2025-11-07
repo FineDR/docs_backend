@@ -20,6 +20,6 @@ class SoftSkillInline(admin.TabularInline):
 # Main SkillSet admin
 @admin.register(SkillSet)
 class SkillSetAdmin(admin.ModelAdmin):
-    list_display = ("full_name", "email", "user")
-    search_fields = ("full_name", "email", "user__username")
+    list_display = ("user",)  # <-- comma muhimu
+    search_fields = ("user__username",)  # <-- comma muhimu
     inlines = [TechnicalSkillInline, SoftSkillInline]

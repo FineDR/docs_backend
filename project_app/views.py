@@ -1,3 +1,4 @@
+import logging
 from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from .models import Project, Technology
 from .serializers import ProjectSerializer
-
+logger = logging.getLogger(__name__)
 class ProjectView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -16,39 +17,47 @@ class ProjectView(APIView):
         summary="Submit multiple projects",
         description="Authenticated users can submit multiple projects with technologies at once"
     )
-    def post(self, request):
-        user = request.user
-        projects = request.data.get("projects", [])
 
-        if not projects:
-            return Response({"error": "No projects provided"}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+       
+        projects_data = request.data.get("projects")
+        if projects_data is None:
+            # Check if request.data itself looks like a project object
+            if "title" in request.data and "description" in request.data:
+                projects_data = [request.data.copy()]
+            else:
+                return Response({"error": "No projects provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         created_projects = []
 
-        for proj in projects:
-            technologies_data = proj.pop("technologies", [])
-            serializer = ProjectSerializer(data=proj, context={'request': request})
+        for idx, proj_data in enumerate(projects_data):
+            # Remove unwanted fields
+            proj_data.pop("email", None)
+
+            serializer = ProjectSerializer(data=proj_data, context={'request': request})
             if serializer.is_valid():
                 with transaction.atomic():
-                    # Pass user directly to save() instead of adding it to data
-                    project_instance = serializer.save(user=user)
-
-                    for tech in technologies_data:
-                        Technology.objects.create(project=project_instance, **tech)
-
+                    project_instance = serializer.save()
                 created_projects.append(ProjectSerializer(project_instance, context={'request': request}).data)
             else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+                return Response(
+                    {"error": f"Project #{idx} validation failed", "details": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         return Response(
             {"message": "Projects submitted successfully", "data": created_projects},
             status=status.HTTP_201_CREATED
         )
 
+    
+
     @extend_schema(
         responses=ProjectSerializer,
         summary="Get all projects for authenticated user"
     )
+
     def get(self, request):
         projects = Project.objects.filter(user=request.user)
         serializer = ProjectSerializer(projects, many=True, context={'request': request})

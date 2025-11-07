@@ -1,3 +1,4 @@
+# skills_app/models.py
 from django.db import models
 from django.conf import settings
 
@@ -7,11 +8,9 @@ class SkillSet(models.Model):
         on_delete=models.CASCADE,
         related_name="skill_sets"
     )
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField()
 
     def __str__(self):
-        return f"Skills for {self.full_name}"
+        return f"Skills for {self.user.get_full_name() or self.user.username}"
 
 
 class TechnicalSkill(models.Model):
