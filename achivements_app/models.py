@@ -32,3 +32,7 @@ class Achievement(models.Model):
 
     def __str__(self):
         return f"{self.value[:50]}..."  # first 50 chars
+
+    @property
+    def id(self):
+        return self.pk  # Django automatically provides pk; this makes id explicit for frontend
