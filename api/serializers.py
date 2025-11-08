@@ -158,6 +158,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
         # Extract personal details
         pd = data.get("personal_details") or {}
+        profile_data = data.get("profile") or {}
+        achievement_profile_data = data.get("achievement_profile") or {}
 
         # ---------------- Nested enhanced_data ----------------
         enhanced_data = {
@@ -172,13 +174,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "educations": data.get("educations", []),
             # Include certificates in proper nested structure
             "profile": {
-                **data.get("profile", {}),
-                "certificates": data.get("profile", {}).get("certificates", [])
+                **profile_data,
+                "certificates": profile_data.get("certificates", []),
             },
-            # Include achievement profile properly nested
             "achievement_profile": {
-                **data.get("achievement_profile", {}),
-                "achievements": data.get("achievement_profile", {}).get("achievements", [])
+                **achievement_profile_data,
+                "achievements": achievement_profile_data.get("achievements", []),
             },
             "work_experiences": data.get("work_experiences", []),
             "projects": data.get("projects", []),
