@@ -16,26 +16,60 @@ class ReferenceView(APIView):
     )
     def post(self, request, pk=None):
         user = request.user
-        data = request.data.get('references', [])
+        data = request.data
 
-        if pk:  # single reference creation/update
+        # 🔹 Handle single create/update via pk
+        if pk:
             try:
                 reference = Reference.objects.get(user=user, pk=pk)
             except Reference.DoesNotExist:
-                return Response({"detail": "Reference not found"}, status=status.HTTP_404_NOT_FOUND)
-            serializer = ReferenceSerializer(reference, data=request.data)
+                return Response(
+                    {"detail": "Reference not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # ✅ Accept both direct object or wrapped under "references"
+            if isinstance(data.get("references"), list):
+                data = data["references"][0]
+
+            serializer = ReferenceSerializer(reference, data=data, partial=False)
             if serializer.is_valid():
                 serializer.save(user=user)
-                return Response({"message": "Reference updated successfully", "data": serializer.data})
+                return Response(
+                    {"message": "Reference updated successfully", "data": serializer.data},
+                    status=status.HTTP_200_OK
+                )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # bulk create
-        # Reference.objects.filter(user=user).delete()
-        serializer = ReferenceSerializer(data=data, many=True)
+        # 🔹 Handle bulk or single create (no pk)
+        # if body is a single object instead of wrapped "references"
+        if isinstance(data, dict) and "references" not in data:
+            serializer = ReferenceSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save(user=user)
+                return Response(
+                    {"message": "Reference created successfully", "data": serializer.data},
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # 🔹 If "references" is present — bulk creation
+        references_data = data.get("references", [])
+        if not isinstance(references_data, list):
+            return Response(
+                {"detail": "Invalid format: 'references' must be a list"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = ReferenceSerializer(data=references_data, many=True)
         if serializer.is_valid():
             serializer.save(user=user)
-            return Response({"message": "References saved successfully"}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "References saved successfully", "data": serializer.data},
+                status=status.HTTP_200_OK
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     @extend_schema(
         responses=ReferenceSerializer(many=True),
@@ -64,25 +98,34 @@ class ReferenceView(APIView):
     def put(self, request, pk=None):
         user = request.user
 
-        if pk:  # single reference update
+        # 🔹 Handle single reference update
+        if pk:
             try:
                 reference = Reference.objects.get(user=user, pk=pk)
             except Reference.DoesNotExist:
                 return Response({"detail": "Reference not found"}, status=status.HTTP_404_NOT_FOUND)
-            serializer = ReferenceSerializer(reference, data=request.data, partial=True)
+
+            # ✅ Accept both direct object or wrapped under "references"
+            data = request.data
+            if isinstance(data.get("references"), list):
+                data = data["references"][0]
+
+            serializer = ReferenceSerializer(reference, data=data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Reference updated successfully", "data": serializer.data})
+                return Response({
+                    "message": "Reference updated successfully",
+                    "data": serializer.data
+                }, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # bulk update
+        # 🔹 Handle bulk updates
         data = request.data.get('references', [])
         response_data = []
 
         for item in data:
             ref_id = item.get("id")
             if ref_id:
-                # update existing reference
                 try:
                     ref = Reference.objects.get(user=user, pk=ref_id)
                     serializer = ReferenceSerializer(ref, data=item, partial=True)
@@ -92,13 +135,16 @@ class ReferenceView(APIView):
                 except Reference.DoesNotExist:
                     continue
             else:
-                # create new reference
                 serializer = ReferenceSerializer(data=item)
                 if serializer.is_valid():
                     serializer.save(user=user)
                     response_data.append(serializer.data)
 
-        return Response({"message": "References updated successfully", "data": response_data}, status=status.HTTP_200_OK)
+        return Response({
+            "message": "References updated successfully",
+            "data": response_data
+        }, status=status.HTTP_200_OK)
+
 
 
     @extend_schema(

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 import subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 # User = settings.AUTH_USER_MODEL
 def ensure_user_enhanced_data(user):
@@ -150,27 +151,33 @@ class UserLoginView(APIView):
 
 
 
+
+
+
 class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        logger.info("Logout request received.")
-        logger.info(f"Request data: {request.data}")
-
         refresh_token = request.data.get("refresh")
         if not refresh_token:
-            logger.warning("No refresh token found in request data.")
+            logger.warning("Logout request missing refresh token")
             return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            logger.info(f"Received refresh token: {refresh_token}")
             token = RefreshToken(refresh_token)
             token.blacklist()
-            logger.info("Token blacklisted successfully.")
+            logger.info("Refresh token blacklisted successfully")
             return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
+
+        except TokenError:
+            # Token is already blacklisted or invalid
+            logger.warning("Attempt to blacklist an invalid or already blacklisted token")
+            return Response({"detail": "Invalid or already blacklisted token."}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            logger.error(f"Error blacklisting token: {str(e)}", exc_info=True)
-            return Response({"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"Unexpected error blacklisting token: {str(e)}", exc_info=True)
+            return Response({"detail": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
         
 class UserProfileView(APIView):

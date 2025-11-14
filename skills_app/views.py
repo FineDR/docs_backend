@@ -5,7 +5,9 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from .models import SkillSet
 from .serializers import SkillSetSerializer
-
+from rest_framework import generics
+from .models import TechnicalSkill, SoftSkill
+from .serializers import TechnicalSkillSerializer, SoftSkillSerializer
 
 class SkillSetView(APIView):
     permission_classes = [IsAuthenticated]
@@ -79,3 +81,15 @@ class SkillSetDetailView(APIView):
             return Response({"error": "SkillSet not found"}, status=status.HTTP_404_NOT_FOUND)
         skill_set.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class TechnicalSkillDetailView(generics.DestroyAPIView):
+    queryset = TechnicalSkill.objects.all()
+    serializer_class = TechnicalSkillSerializer
+    permission_classes = [IsAuthenticated]
+
+class SoftSkillDetailView(generics.DestroyAPIView):
+    queryset = SoftSkill.objects.all()
+    serializer_class = SoftSkillSerializer
+    permission_classes = [IsAuthenticated]

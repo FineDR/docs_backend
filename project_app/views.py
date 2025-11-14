@@ -58,10 +58,23 @@ class ProjectView(APIView):
         summary="Get all projects for authenticated user"
     )
 
-    def get(self, request):
-        projects = Project.objects.filter(user=request.user)
-        serializer = ProjectSerializer(projects, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def put(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, user=request.user)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProjectSerializer(project, data=request.data, context={'request': request})
+        if serializer.is_valid():
+            with transaction.atomic():
+                project_instance = serializer.save()  # handles technologies already
+
+            return Response(
+                {"message": "Project updated successfully", "data": ProjectSerializer(project_instance, context={'request': request}).data}
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class ProjectDetailView(APIView):
