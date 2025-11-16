@@ -49,6 +49,7 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 # Expose internal port
+# user entrypoint script to wait for DB, apply migrations, and start Gunicorn
 EXPOSE 8000
 
 # Use entrypoint script to wait for DB, apply migrations, and start Gunicorn
