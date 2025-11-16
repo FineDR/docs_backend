@@ -37,7 +37,7 @@ jobs:
       # Step 5: Build Docker image
       - name: Build Docker image
         run: |
-          docker build -t multi-frontend-backend_api ./docs_backend
+          docker build -t multi-frontend-backend_api .
 
       # Step 6: Login to Docker Hub
       - name: Docker Hub login
