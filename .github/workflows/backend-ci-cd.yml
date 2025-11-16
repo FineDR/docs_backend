@@ -62,4 +62,4 @@ jobs:
           script: |
             cd ~/multi-frontend
             docker-compose pull backend_api
-            docker-compose up -d backend_api
+            docker-compose up -d backend_api --force-recreate backend_api
