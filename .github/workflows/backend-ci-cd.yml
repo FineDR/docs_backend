@@ -52,6 +52,7 @@ jobs:
           docker tag multi-frontend-backend_api ${{ secrets.DOCKER_HUB_USERNAME }}/multi-frontend-backend_api:latest
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/multi-frontend-backend_api:latest
 
+      #however, Step 8: Deploy to server
       # Step 8: Deploy via SSH
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.8
