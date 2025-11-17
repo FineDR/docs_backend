@@ -60,8 +60,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # Navigate to backend folder on the server
-            cd ~/multi-frontend/backend
+            # Go to the parent folder where docker-compose.yml lives
+            cd ~/multi-frontend
 
             echo "Pulling latest backend image..."
             docker-compose pull backend_api
