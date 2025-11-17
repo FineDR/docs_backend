@@ -21,10 +21,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
 
       - name: Run tests
-        run: python manage.py test
+        run: python backend/manage.py test
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -33,7 +33,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build backend image
-        run: docker build -t multi-frontend-backend_api .
+        run: docker build -t multi-frontend-backend_api ./backend
 
       - name: Push backend image
         run: |
@@ -62,11 +62,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ~/docs_backend
+            cd ~/multi-frontend/backend
 
             echo "Rewriting backend .env..."
             rm -f .env
-
             cat <<'EOF' > .env
             DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
             DJANGO_DEBUG=False
@@ -107,10 +106,10 @@ jobs:
             EOF
 
                         echo "Pulling updated backend image..."
-                        docker-compose pull backend_api
+                        docker-compose -f docker-compose.yml pull backend_api
 
                         echo "Recreating backend container..."
-                        docker-compose up -d --force-recreate backend_api
+                        docker-compose -f docker-compose.yml up -d --force-recreate backend_api
 
                         echo "Running migrations..."
                         docker exec backend_api python manage.py migrate --noinput
