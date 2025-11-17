@@ -27,12 +27,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r requirements.txt
 
       # Step 4: Run tests
       - name: Run tests
         run: |
-          python backend/manage.py test
+          python manage.py test
 
       # Step 5: Build Docker image
       - name: Build Docker image
