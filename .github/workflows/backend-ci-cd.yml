@@ -30,7 +30,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build backend image
         run: docker build -t multi-frontend-backend_api .
@@ -42,7 +42,7 @@ jobs:
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.8
-        env:  # Export all secrets into SSH environment
+        env:
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
           DB_NAME: ${{ secrets.DB_NAME }}
