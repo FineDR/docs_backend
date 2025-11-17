@@ -33,7 +33,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build backend image
-        run: docker build -t multi-frontend-backend_api ./backend
+        run: docker build -t multi-frontend-backend_api .
 
       - name: Push backend image
         run: |
@@ -62,7 +62,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ~/multi-frontend/backend
+            cd ~/docs_backend
 
             echo "Rewriting backend .env..."
             rm -f .env
