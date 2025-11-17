@@ -27,17 +27,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r multi-frontend/backend/requirements.txt
+          pip install -r backend/requirements.txt
 
       # Step 4: Run tests
       - name: Run tests
         run: |
-          python multi-frontend/backend/manage.py test
+          python backend/manage.py test
 
       # Step 5: Build Docker image
       - name: Build Docker image
         run: |
-          docker build -t multi-frontend-backend_api ./multi-frontend/backend
+          docker build -t multi-frontend-backend_api ./backend
 
       # Step 6: Login to Docker Hub
       - name: Docker Hub login
@@ -60,7 +60,9 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            # Navigate to backend folder on the server
             cd ~/multi-frontend/backend
+
             echo "Pulling latest backend image..."
             docker-compose pull backend_api
 
