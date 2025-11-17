@@ -64,8 +64,11 @@ jobs:
           script: |
             cd ~/multi-frontend/backend
 
+            # Ensure you have write permission for .env
+            touch .env
+            chmod 600 .env
+
             echo "Rewriting backend .env..."
-            rm -f .env
             cat <<'EOF' > .env
             DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
             DJANGO_DEBUG=False
