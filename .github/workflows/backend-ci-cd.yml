@@ -33,7 +33,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build backend image
-        run: docker build -t multi-frontend-backend_api .
+        run: docker build -t multi-frontend-backend_api ./backend
 
       - name: Push backend image
         run: |
@@ -62,47 +62,49 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ~/multi-frontend/backend
+            cd ~/multi-frontend  # <- directory with docker-compose.yml
 
             echo "Rewriting backend .env..."
-            rm -f .env
+            rm -f ./backend/.env
 
-            echo "DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY" >> .env
-            echo "DJANGO_DEBUG=False" >> .env
-            echo "DJANGO_ALLOWED_HOSTS=$DJANGO_ALLOWED_HOSTS" >> .env
+            cat <<EOF > ./backend/.env
+DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=$DJANGO_ALLOWED_HOSTS
 
-            echo "DB_HOST=backend_db" >> .env
-            echo "DB_NAME=$DB_NAME" >> .env
-            echo "DB_USER=$DB_USER" >> .env
-            echo "DB_PASSWORD=$DB_PASSWORD" >> .env
-            echo "DB_PORT=5432" >> .env
-            echo "DATABASE_URL=postgres://$DB_USER:$DB_PASSWORD@backend_db:5432/$DB_NAME" >> .env
+DB_HOST=backend_db
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_PORT=5432
+DATABASE_URL=postgres://$DB_USER:$DB_PASSWORD@backend_db:5432/$DB_NAME
 
-            echo "EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend" >> .env
-            echo "EMAIL_USE_TLS=True" >> .env
-            echo "EMAIL_HOST=smtp.gmail.com" >> .env
-            echo "EMAIL_PORT=587" >> .env
-            echo "EMAIL_HOST_USER=$EMAIL_HOST_USER" >> .env
-            echo "EMAIL_HOST_PASSWORD=$EMAIL_HOST_PASSWORD" >> .env
-            echo "DEFAULT_FROM_EMAIL=$EMAIL_HOST_USER" >> .env
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_USE_TLS=True
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=$EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD=$EMAIL_HOST_PASSWORD
+DEFAULT_FROM_EMAIL=$EMAIL_HOST_USER
 
-            echo "STRIPE_TEST_API_KEY=$STRIPE_TEST_API_KEY" >> .env
-            echo "STRIPE_TEST_SECRET_KEY=$STRIPE_TEST_SECRET_KEY" >> .env
+STRIPE_TEST_API_KEY=$STRIPE_TEST_API_KEY
+STRIPE_TEST_SECRET_KEY=$STRIPE_TEST_SECRET_KEY
 
-            echo "OPENROUTER_API_KEY=$OPENROUTER_API_KEY" >> .env
+OPENROUTER_API_KEY=$OPENROUTER_API_KEY
 
-            echo "FRONTEND_BASE_URL=https://docs.twendedigital.tech" >> .env
-            echo "DJANGO_CORS_ALLOWED_ORIGINS=https://docs.twendedigital.tech,https://www.docs.twendedigital.tech,http://localhost:5173" >> .env
-            echo "DJANGO_CSRF_TRUSTED_ORIGINS=https://docs.twendedigital.tech,https://www.docs.twendedigital.tech,http://localhost:5173" >> .env
+FRONTEND_BASE_URL=https://docs.twendedigital.tech
+DJANGO_CORS_ALLOWED_ORIGINS=https://docs.twendedigital.tech,https://www.docs.twendedigital.tech,http://localhost:5173
+DJANGO_CSRF_TRUSTED_ORIGINS=https://docs.twendedigital.tech,https://www.docs.twendedigital.tech,http://localhost:5173
 
-            echo "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" >> .env
+VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
-            echo "AZAMPAY_CLIENT_ID=$AZAMPAY_CLIENT_ID" >> .env
-            echo "AZAMPAY_CLIENT_SECRET=$AZAMPAY_CLIENT_SECRET" >> .env
-            echo "AZAMPAY_BASE_URL=https://sandbox.azampay.co.tz" >> .env
-            echo "CALLBACK_URL=https://docs.twendedigital.tech/api/payments/callback/" >> .env
+AZAMPAY_CLIENT_ID=$AZAMPAY_CLIENT_ID
+AZAMPAY_CLIENT_SECRET=$AZAMPAY_CLIENT_SECRET
+AZAMPAY_BASE_URL=https://sandbox.azampay.co.tz
+CALLBACK_URL=https://docs.twendedigital.tech/api/payments/callback/
 
-            echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
+ALLOWED_HOSTS=$ALLOWED_HOSTS
+EOF
 
             echo "Pulling updated backend image..."
             docker-compose pull backend_api
