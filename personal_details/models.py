@@ -12,8 +12,8 @@ class PersonalDetail(models.Model):
     linkedin = models.URLField(blank=True, null=True)
     github = models.URLField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)
-    date_of_birth = models.DateField()
-    nationality = models.CharField(max_length=100)
+    date_of_birth = models.DateField(blank=True, null=True)
+    nationality = models.CharField(max_length=100, blank=True, null=True)
     profile_summary = models.TextField(blank=True, null=True)
     profile_image = models.ImageField(
         upload_to='profile_images/',  # folder where images will be stored

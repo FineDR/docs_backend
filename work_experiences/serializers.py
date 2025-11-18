@@ -2,12 +2,29 @@
 from rest_framework import serializers
 from .models import WorkExperience, Responsibility
 
+
+from rest_framework import serializers
+
+class NullableDateField(serializers.DateField):
+    def to_internal_value(self, value):
+        if value in ("", None):
+            return None
+        return super().to_internal_value(value)
+
+class NullableCharField(serializers.CharField):
+    def to_internal_value(self, value):
+        if value in ("", None):
+            return None
+        return super().to_internal_value(value)
+
 class ResponsibilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Responsibility
         fields = ["value"]
 
 class WorkExperienceSerializer(serializers.ModelSerializer):
+    end_date = NullableDateField(required=False, allow_null=True, default=None)
+    location = NullableCharField(required=False, allow_blank=True, allow_null=True, default=None)
     responsibilities = ResponsibilitySerializer(many=True)
 
     class Meta:
@@ -17,6 +34,7 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         responsibilities_data = validated_data.pop("responsibilities", [])
         user = self.context["request"].user
+
         work_experience = WorkExperience.objects.create(user=user, **validated_data)
 
         for resp_data in responsibilities_data:
@@ -36,6 +54,7 @@ class WorkExperienceSerializer(serializers.ModelSerializer):
             Responsibility.objects.create(work_experience=instance, **resp_data)
 
         return instance
+
 
 class WorkExperienceListSerializer(serializers.ListSerializer):
     child = WorkExperienceSerializer()  # Each item uses the normal serializer
