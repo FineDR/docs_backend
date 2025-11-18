@@ -253,18 +253,27 @@ def build_header(flow, data, styles):
     header_flowables = create_header(data, styles)
     flow.extend(header_flowables)  # append all flowables from create_header
 
-def build_profile_summary(flow, data, styles):
+def build_profile_summary(flow, data,styles,top_margin=12):
     profile_text = data.get('profile_summary', '').strip()
     if not profile_text:
         return  # Skip section if empty
 
+    flow.append(Spacer(1, top_margin))
+    # Add left colored border
     flow.append(
-        gray_card([
-            section_header_table("Profile Summary", styles),
-            Paragraph(profile_text, styles['NormalJust'])
-        ], bg_color=colors.HexColor("#ebf8ff"))
+        gray_card(
+            [
+                section_header_table("Profile Summary", styles),
+                Paragraph(profile_text, styles['NormalJust'])
+            ],
+            bg_color=colors.HexColor("#ebf8ff"),        # light blue background
+            left_border=colors.HexColor("#14b8a6"),     # blue left border like languages section
+            card_padding=6
+        )
     )
     flow.append(Spacer(1, 6))
+
+
 
 
 def build_languages(flow, languages, styles, max_pills_per_row=3):
@@ -380,22 +389,24 @@ def build_work_experience(flow, experiences, styles):
     for w in valid_exp:
         card_content = []
 
-        job_title = w.get('job_title', '').strip()
-        company = w.get('company', '').strip()
+        # Safely get string fields and strip
+        job_title = (w.get('job_title') or "").strip()
+        company = (w.get('company') or "").strip()
         if job_title or company:
             card_content.append(Paragraph(f"<b>{job_title}</b>  <i>{company}</i>", styles['Small']))
 
-        location = w.get('location', '').strip()
-        start = w.get('start_date', '').strip()
-        end = w.get('end_date', '').strip() or 'Present'
+        location = (w.get('location') or "").strip()
+        start = (w.get('start_date') or "").strip()
+        end = (w.get('end_date') or "").strip() or 'Present'
         if location or start or end:
             line = f"{location}" if location else ""
             if start or end:
                 line += f"  •  {start or ''} – {end or ''}"
             card_content.append(Paragraph(line, styles['SmallItalic']))
 
+        # Safely handle responsibilities
         responsibilities = w.get('responsibilities') or []
-        responsibilities = [r.strip() for r in responsibilities if r.strip()]
+        responsibilities = [r.strip() for r in responsibilities if r and r.strip()]
         if responsibilities:
             bullets = ListFlowable(
                 [ListItem(Paragraph(r, styles['Small'])) for r in responsibilities],
@@ -405,6 +416,7 @@ def build_work_experience(flow, experiences, styles):
             )
             card_content.append(bullets)
 
+        # Add card to flow if any content exists
         if card_content:
             gray = gray_card(
                 card_content,
@@ -414,6 +426,7 @@ def build_work_experience(flow, experiences, styles):
             )
             flow.append(KeepTogether(gray))
             flow.append(Spacer(1,6))
+
 
 
 def build_projects(flow, projects, styles):
@@ -608,6 +621,7 @@ def build_achievements(flow, achievements: List[str], styles):
 
 
 def generate_cv_safe(data: Dict[str, Any], output_path: str):
+    import traceback
     styles = get_styles()
     
     doc = BaseDocTemplate(
@@ -629,47 +643,47 @@ def generate_cv_safe(data: Dict[str, Any], output_path: str):
     
     flow = []
 
-    # Header (always included if name or contact exists)
+    # Helper to safely call builder functions
+    def safe_build(func, *args):
+        try:
+            func(*args)
+        except Exception as e:
+            print(f"⚠️ Error in {func.__name__}: {e}")
+            print(traceback.format_exc())
+
+    # Header
     if any([data.get("full_name"), data.get("profile_image"), data.get("phone"), data.get("email")]):
-        build_header(flow, data, styles)
+        safe_build(build_header, flow, data, styles)
 
     # Profile Summary
-    if data.get("profile_summary"):
-        build_profile_summary(flow, data, styles)
+    safe_build(build_profile_summary, flow, data, styles)
 
     # Education
-    educations = data.get('educations', [])
-    if educations:
-        build_education(flow, educations, styles)
-    
+    safe_build(build_education, flow, data.get('educations', []), styles)
+
     # Languages
-    languages = data.get('languages', [])
-    if languages:
-        build_languages(flow, languages, styles)
-    
+    safe_build(build_languages, flow, data.get('languages', []), styles)
+
     # Work Experience
-    experiences = data.get('work_experiences', [])
-    if experiences:
-        build_work_experience(flow, experiences, styles)
-    
+    safe_build(build_work_experience, flow, data.get('work_experiences', []), styles)
+
     # Projects
-    projects = data.get('projects', [])
-    if projects:
-        build_projects(flow, projects, styles)
+    safe_build(build_projects, flow, data.get('projects', []), styles)
 
     # Skills
-    if data.get('technical_skills') or data.get('soft_skills'):
-        build_skills(flow, data, styles)
-    
+    safe_build(build_skills, flow, data, styles)
+
     # Achievements
-    achievements = data.get('achievements', [])
-    if achievements:
-        build_achievements(flow, achievements, styles)
+    safe_build(build_achievements, flow, data.get('achievements', []), styles)
 
     # References
-    references = data.get('references', [])
-    if references:
-        build_references(flow, references, styles)
+    safe_build(build_references, flow, data.get('references', []), styles)
 
-    doc.build(flow)
+    # Finally, build the PDF
+    try:
+        doc.build(flow)
+    except Exception as e:
+        print(f"⚠️ Error during doc.build: {e}")
+        print(traceback.format_exc())
+
     return output_path

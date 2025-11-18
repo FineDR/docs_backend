@@ -338,9 +338,9 @@ def generate_cv(data, output_path=None):
 
 
     # flow.extend(create_section("Career Objective", data.get("career_objective",""), styles))
-    career_objective = data.get("career_objective", "").strip()
-    if career_objective:
-        flow.extend(create_section("Career Objective", career_objective, styles))
+    # career_objective = data.get("career_objective", "").strip()
+    # if career_objective:
+    #     flow.extend(create_section("Career Objective", career_objective, styles))
 
     
     # flow.extend(create_section("Education", [f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})" for e in data.get("educations", [])], styles))
