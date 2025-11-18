@@ -385,15 +385,46 @@ def generate_cv(data: Dict[str, Any], output_path: str):
     styles = get_styles()
     flow = []
 
+    # Always show header
     build_header(flow, data, styles)
-    build_profile_summary(flow, data, styles)
-    build_education(flow, data.get('educations', []), styles)
-    build_work_experience(flow, data.get('work_experiences', []), styles)
-    build_projects(flow, data.get('projects', []), styles)
-    build_skills(flow, data, styles)
-    build_languages(flow, data.get('languages', []), styles)
-    build_references(flow, data.get('references', []), styles)
 
+    # Profile Summary (only if content exists)
+    profile_summary = data.get('profile_summary', '').strip()
+    if profile_summary:
+        build_profile_summary(flow, data, styles)
+
+    # Education
+    educations = data.get('educations', [])
+    if educations:
+        build_education(flow, educations, styles)
+
+    # Work Experience
+    work_experiences = data.get('work_experiences', [])
+    if work_experiences:
+        build_work_experience(flow, work_experiences, styles)
+
+    # Projects
+    projects = data.get('projects', [])
+    if projects:
+        build_projects(flow, projects, styles)
+
+    # Skills
+    technical_skills = data.get('technical_skills', [])
+    soft_skills = data.get('soft_skills', [])
+    if technical_skills or soft_skills:
+        build_skills(flow, data, styles)
+
+    # Languages
+    languages = data.get('languages', [])
+    if languages:
+        build_languages(flow, languages, styles)
+
+    # References
+    references = data.get('references', [])
+    if references:
+        build_references(flow, references, styles)
+
+    # Generate PDF
     doc = SimpleDocTemplate(
         output_path,
         pagesize=A4,

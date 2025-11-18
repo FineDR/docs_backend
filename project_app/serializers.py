@@ -10,6 +10,7 @@ class TechnologySerializer(serializers.ModelSerializer):
         fields = ["id", "value"]
 
 class ProjectSerializer(serializers.ModelSerializer):
+    link = serializers.URLField(required=False, allow_null=True, allow_blank=True,default=None)
     technologies = TechnologySerializer(many=True, required=False)
 
     class Meta:

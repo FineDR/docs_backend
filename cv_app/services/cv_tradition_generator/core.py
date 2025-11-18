@@ -331,24 +331,75 @@ def generate_cv(data, output_path=None):
 
     flow = []
     flow.extend(create_header(data, styles))
-    flow.extend(create_section("Profile Summary", data.get("profile_summary",""), styles))
-    flow.extend(create_section("Career Objective", data.get("career_objective",""), styles))
-    flow.extend(create_section("Education", [f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})" for e in data.get("educations", [])], styles))
+    # flow.extend(create_section("Profile Summary", data.get("profile_summary",""), styles))
+    profile_summary = data.get("profile_summary", "").strip()
+    if profile_summary:
+        flow.extend(create_section("Profile Summary", profile_summary, styles))
 
+
+    # flow.extend(create_section("Career Objective", data.get("career_objective",""), styles))
+    career_objective = data.get("career_objective", "").strip()
+    if career_objective:
+        flow.extend(create_section("Career Objective", career_objective, styles))
+
+    
+    # flow.extend(create_section("Education", [f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})" for e in data.get("educations", [])], styles))
+    # Education
+    education_content = []
+    for e in data.get("educations", []):
+        line = f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})"
+        if e.get("grade"):
+            line += f", Grade: {e['grade']}"
+        if e.get("location"):
+            line += f", Location: {e['location']}"
+        education_content.append(line)
+    if education_content:
+        flow.extend(create_section("Education", education_content, styles))
+
+    # Work Experience
     work_exp_content = []
     for w in data.get("work_experiences", []):
         lines = [f"{w['job_title']} at {w['company']} ({w['start_date']} – {w.get('end_date','Present')})"]
         if w.get("responsibilities"):
             lines.extend([f"- {r}" for r in w["responsibilities"]])
         work_exp_content.append("\n".join(lines))
-    flow.extend(create_section("Work Experience", work_exp_content, styles))
+    if work_exp_content:
+        flow.extend(create_section("Work Experience", work_exp_content, styles))
 
-    flow.extend(create_projects_section(data.get("projects", []), styles))
-    flow.extend(create_skills_section(data, styles))
-    flow.extend(create_section("Achievements", data.get("achievements", []), styles))
-    flow.extend(create_section("Languages", [f"{l['language']} ({l['proficiency']})" for l in data.get("languages", [])], styles))
-    flow.extend(create_section("Certifications", [f"{c['name']} — {c['issuer']} ({c['date']})" for c in data.get("certificates", [])], styles))
-    flow.extend(create_section("References", [f"{r['name']} — {r['position']} ({r['email']}, {r['phone']})" for r in data.get("references", [])], styles))
 
+    # flow.extend(create_projects_section(data.get("projects", []), styles))
+    projects = data.get("projects", [])
+    if projects:
+        flow.extend(create_projects_section(projects, styles))
+
+    # flow.extend(create_skills_section(data, styles))
+    skills= data.get("technical_skills", []) + data.get("soft_skills", [])
+    if skills:
+        flow.extend(create_skills_section(data, styles))
+
+
+    # flow.extend(create_section("Achievements", data.get("achievements", []), styles))
+    achievements = data.get("achievements", [])
+    if achievements:
+        flow.extend(create_section("Achievements", achievements, styles))
+
+    # flow.extend(create_section("Languages", [f"{l['language']} ({l['proficiency']})" for l in data.get("languages", [])], styles))
+    languages = data.get("languages", [])
+    if languages:
+        lang_content = [f"{l['language']} ({l['proficiency']})" for l in languages]
+        flow.extend(create_section("Languages", lang_content, styles))
+    
+
+    # flow.extend(create_section("Certifications", [f"{c['name']} — {c['issuer']} ({c['date']})" for c in data.get("certificates", [])], styles))
+    certificates = data.get("certificates", [])
+    if certificates:
+        cert_content = [f"{c['name']} — {c['issuer']} ({c['date']})" for c in certificates]
+        flow.extend(create_section("Certifications", cert_content, styles))
+
+    # flow.extend(create_section("References", [f"{r['name']} — {r['position']} ({r['email']}, {r['phone']})" for r in data.get("references", [])], styles))
+    references = data.get("references", [])
+    if references:
+        ref_content = [f"{r['name']} — {r['position']} ({r['email']}, {r['phone']})" for r in references]
+        flow.extend(create_section("References", ref_content, styles))
     doc.build(flow)
     print("✅ CV generated successfully")

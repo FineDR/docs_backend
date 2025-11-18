@@ -254,29 +254,42 @@ def build_header(flow, data, styles):
     flow.extend(header_flowables)  # append all flowables from create_header
 
 def build_profile_summary(flow, data, styles):
-    flow.append(gray_card([
-        section_header_table("Profile Summary", styles),
-        Paragraph(data.get('profile_summary',''), styles['NormalJust'])
-    ], bg_color=colors.HexColor("#ebf8ff")))
-    flow.append(Spacer(1,6))
+    profile_text = data.get('profile_summary', '').strip()
+    if not profile_text:
+        return  # Skip section if empty
+
+    flow.append(
+        gray_card([
+            section_header_table("Profile Summary", styles),
+            Paragraph(profile_text, styles['NormalJust'])
+        ], bg_color=colors.HexColor("#ebf8ff"))
+    )
+    flow.append(Spacer(1, 6))
 
 
 def build_languages(flow, languages, styles, max_pills_per_row=3):
-    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    if not languages:
+        return  # Skip if no languages
+
+    # Filter out empty language entries
+    valid_languages = [l for l in languages if l.get('language')]
+    if not valid_languages:
+        return
 
     flow.append(section_header_table("Languages", styles))
     flow.append(Spacer(1, 6))
 
     def language_pills(langs: list):
-        """
-        Convert list of languages into rows of pill-like Tables with rounded edges and no background.
-        """
         rows = []
         for i in range(0, len(langs), max_pills_per_row):
-            row_langs = langs[i:i+max_pills_per_row]
+            row_langs = langs[i:i + max_pills_per_row]
             row_flowables = []
             for lang in row_langs:
-                text = f"{lang.get('language','')} ({lang.get('proficiency','')})"
+                lang_name = lang.get('language', '').strip()
+                prof = lang.get('proficiency', '').strip()
+                if not lang_name:
+                    continue
+                text = f"{lang_name} ({prof})" if prof else lang_name
                 pill = Table([[Paragraph(text, styles['Small'])]],
                              style=TableStyle([
                                  ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#111827")),
@@ -285,145 +298,178 @@ def build_languages(flow, languages, styles, max_pills_per_row=3):
                                  ('TOPPADDING', (0,0), (-1,-1), 2),
                                  ('BOTTOMPADDING', (0,0), (-1,-1), 2),
                                  ('ROUNDED', (0,0), (-1,-1), 6)
-                             ]),
-                             colWidths=None)
+                             ]))
                 row_flowables.append(pill)
-            rows.append(row_flowables)
+            if row_flowables:
+                rows.append(row_flowables)
         return rows
 
-    if languages:
-        flow.append(
-            gray_card(
-                sum(language_pills(languages), []),  # flatten list of rows
-                bg_color=colors.HexColor("#f0f9ff"),
-                left_border=colors.HexColor("#3b82f6"),
-                card_padding=6
-            )
+    flow.append(
+        gray_card(
+            sum(language_pills(valid_languages), []),  # flatten rows
+            bg_color=colors.HexColor("#f0f9ff"),
+            left_border=colors.HexColor("#3b82f6"),
+            card_padding=6
         )
-        flow.append(Spacer(1, 6))
-
+    )
+    flow.append(Spacer(1, 6))
 
 
 def build_education(flow, educations, styles):
-    flow.append(section_header_table("Education", styles))
-    flow.append(Spacer(1, 6))  # <-- Add vertical space after header
-    blocks = []
+    if not educations:
+        return  # Skip section if empty
+
+    # Filter out completely empty entries
+    valid_edu = []
     for edu in educations:
-        card = [
-            Paragraph(f"<b>{edu.get('degree','')}</b>", styles['Small']),
-            Paragraph(f"<i>{edu.get('institution','')}</i>", styles['SmallItalic']),
-            Paragraph(f"{edu.get('location','')}  •  {edu.get('start_date','')} – {edu.get('end_date','')}", styles['Small']),
-            Paragraph(f"Grade: {edu.get('grade','')}", styles['Small'])
-        ]
-        gray = gray_card(card, bg_color=colors.white, left_border=colors.HexColor("#60a5fa"), card_padding=8)
-        blocks.append(gray)
-    for blk in blocks:
-        flow.append(blk)
-        flow.append(Spacer(1,6))
+        if any(edu.get(k) for k in ['degree', 'institution', 'location', 'start_date', 'end_date', 'grade']):
+            valid_edu.append(edu)
+
+    if not valid_edu:
+        return
+
+    flow.append(section_header_table("Education", styles))
+    flow.append(Spacer(1, 6))
+
+    for edu in valid_edu:
+        card_content = []
+
+        degree = edu.get('degree', '').strip()
+        if degree:
+            card_content.append(Paragraph(f"<b>{degree}</b>", styles['Small']))
+
+        institution = edu.get('institution', '').strip()
+        if institution:
+            card_content.append(Paragraph(f"<i>{institution}</i>", styles['SmallItalic']))
+
+        location = edu.get('location', '').strip()
+        start = edu.get('start_date', '').strip()
+        end = edu.get('end_date', '').strip()
+        if location or start or end:
+            line = f"{location}" if location else ""
+            if start or end:
+                line += f"  •  {start or ''} – {end or ''}"
+            card_content.append(Paragraph(line, styles['Small']))
+
+        grade = edu.get('grade', '').strip()
+        if grade:
+            card_content.append(Paragraph(f"Grade: {grade}", styles['Small']))
+
+        if card_content:
+            gray = gray_card(card_content, bg_color=colors.white, left_border=colors.HexColor("#60a5fa"), card_padding=8)
+            flow.append(gray)
+            flow.append(Spacer(1, 6))
 
 
 def build_work_experience(flow, experiences, styles):
-    flow.append(section_header_table("Work Experience", styles))
-    flow.append(Spacer(1, 6))  # <-- Add space here
-    blocks = []
+    if not experiences:
+        return  # skip entire section if empty
+
+    # Filter out completely empty entries
+    valid_exp = []
     for w in experiences:
-        header_line = [
-            Paragraph(f"<b>{w.get('job_title','')}</b>  <i>{w.get('company','')}</i>", styles['Small'])
-        ]
-        sub_line = [
-            Paragraph(f"{w.get('location','')}  •  {w.get('start_date','')} – {w.get('end_date','Present')}", styles['SmallItalic'])
-        ]
-        card_content = header_line + sub_line
-        if w.get('responsibilities'):
+        if any(w.get(k) for k in ['job_title', 'company', 'location', 'start_date', 'end_date', 'responsibilities']):
+            valid_exp.append(w)
+
+    if not valid_exp:
+        return
+
+    flow.append(section_header_table("Work Experience", styles))
+    flow.append(Spacer(1, 6))
+
+    for w in valid_exp:
+        card_content = []
+
+        job_title = w.get('job_title', '').strip()
+        company = w.get('company', '').strip()
+        if job_title or company:
+            card_content.append(Paragraph(f"<b>{job_title}</b>  <i>{company}</i>", styles['Small']))
+
+        location = w.get('location', '').strip()
+        start = w.get('start_date', '').strip()
+        end = w.get('end_date', '').strip() or 'Present'
+        if location or start or end:
+            line = f"{location}" if location else ""
+            if start or end:
+                line += f"  •  {start or ''} – {end or ''}"
+            card_content.append(Paragraph(line, styles['SmallItalic']))
+
+        responsibilities = w.get('responsibilities') or []
+        responsibilities = [r.strip() for r in responsibilities if r.strip()]
+        if responsibilities:
             bullets = ListFlowable(
-                [ListItem(Paragraph(r, styles['Small'])) for r in w['responsibilities']],
+                [ListItem(Paragraph(r, styles['Small'])) for r in responsibilities],
                 bulletType='bullet',
                 bulletFontName='Times-Roman',
                 leftIndent=12
             )
             card_content.append(bullets)
-        gray = gray_card(card_content, bg_color=colors.HexColor("#f1f5f9"), left_border=colors.HexColor("#34d399"), card_padding=8)
-        blocks.append(gray)
-    for blk in blocks:
-        flow.append(blk)
-        flow.append(Spacer(1,6))
 
-def build_projects(flow, projects, styles):
-    # Section header
-    flow.append(section_header_table("Projects", styles))
-    flow.append(Spacer(1, 6))  # vertical space after header
-
-    for p in projects:
-        # Card content
-        card_content = [
-            Paragraph(f"<b>{p.get('title','')}</b>", styles['Small']),
-            Paragraph(p.get('description',''), styles['Small'])
-        ]
-
-        if p.get('link'):
-            card_content.append(Paragraph(f'<u>{p["link"]}</u>', styles['Small']))
-
-        techs = p.get('technologies') or []
-        if techs:
-            card_content.append(
-                Paragraph("Technologies: " + ", ".join(techs), styles['Small'])
+        if card_content:
+            gray = gray_card(
+                card_content,
+                bg_color=colors.HexColor("#f1f5f9"),
+                left_border=colors.HexColor("#34d399"),
+                card_padding=8
             )
-
-        # Gray card like work experience
-        gray = gray_card(
-            card_content,
-            bg_color=colors.HexColor("#f1f5f9"),
-            left_border=colors.HexColor("#6366f1"),  # purple left border
-            card_padding=8
-        )
-
-        flow.append(gray)
-        flow.append(Spacer(1, 6))  # space between projects
+            flow.append(KeepTogether(gray))
+            flow.append(Spacer(1,6))
 
 
 def build_projects(flow, projects, styles):
+    if not projects:
+        return
+
+    # Filter out completely empty projects
+    valid_projects = []
+    for p in projects:
+        if any(p.get(k) for k in ['title', 'description', 'link', 'technologies']):
+            valid_projects.append(p)
+
+    if not valid_projects:
+        return
+
     flow.append(section_header_table("Projects", styles))
     flow.append(Spacer(1, 6))
 
-    for p in projects:
-        card_content = [
-            Paragraph(f"<b>{p.get('title','')}</b>", styles['Small']),
-            Paragraph(p.get('description',''), styles['Small'])
-        ]
+    for p in valid_projects:
+        card_content = []
 
-        if p.get('link'):
-            card_content.append(Paragraph(f'<u>{p["link"]}</u>', styles['Small']))
+        title = p.get('title', '').strip()
+        if title:
+            card_content.append(Paragraph(f"<b>{title}</b>", styles['Small']))
 
-        techs = p.get('technologies') or []
+        description = p.get('description', '').strip()
+        if description:
+            card_content.append(Paragraph(description, styles['Small']))
+
+        link = p.get('link', '').strip()
+        if link:
+            card_content.append(Paragraph(f'<u>{link}</u>', styles['Small']))
+
+        techs = [t.strip() for t in (p.get('technologies') or []) if t.strip()]
         if techs:
             card_content.append(Paragraph("Technologies: " + ", ".join(techs), styles['Small']))
 
-        gray = gray_card(
-            card_content,
-            bg_color=colors.HexColor("#f1f5f9"),
-            left_border=colors.HexColor("#6366f1"),
-            card_padding=8
-        )
-
-        # Wrap in KeepTogether to avoid splitting mid-card
-        flow.append(KeepTogether(gray))
-        flow.append(Spacer(1,6))
+        if card_content:
+            gray = gray_card(
+                card_content,
+                bg_color=colors.HexColor("#f1f5f9"),
+                left_border=colors.HexColor("#6366f1"),
+                card_padding=8
+            )
+            flow.append(KeepTogether(gray))
+            flow.append(Spacer(1,6))
 
 
 def build_skills(flow, data, styles):
-    from reportlab.platypus import Paragraph, Spacer, ListFlowable, ListItem
-
-    tech_skills = data.get('technical_skills', [])
-    soft_skills = data.get('soft_skills', [])
+    tech_skills = [s.strip() for s in (data.get('technical_skills') or []) if s.strip()]
+    soft_skills = [s.strip() for s in (data.get('soft_skills') or []) if s.strip()]
 
     def build_skill_list(title, skills, card_bg, border_color):
         if not skills:
             return
-
-        # Section header
         header = Paragraph(title, styles['Small'])
-
-        # Build unordered list of skills
         bullets = ListFlowable(
             [ListItem(Paragraph(skill, styles['Small']), bulletColor=colors.HexColor("#111827"))
              for skill in skills],
@@ -432,60 +478,70 @@ def build_skills(flow, data, styles):
             bulletFontName='Times-Roman',
             bulletFontSize=10
         )
-
-        # Wrap list in a gray_card
-        flow.append(
-            gray_card(
-                [header, bullets],
-                bg_color=card_bg,
-                left_border=border_color,
-                card_padding=6
-            )
-        )
+        flow.append(gray_card([header, bullets], bg_color=card_bg, left_border=border_color, card_padding=6))
         flow.append(Spacer(1, 6))
 
-    # Technical Skills
     build_skill_list(
         "Technical Skills", tech_skills,
         card_bg=colors.HexColor("#f0f9ff"),
         border_color=colors.HexColor("#3b82f6")
     )
 
-    # Soft Skills
     build_skill_list(
         "Soft Skills", soft_skills,
         card_bg=colors.HexColor("#f0fdf4"),
         border_color=colors.HexColor("#10b981")
     )
 
-
 def build_references(flow, references, styles):
     """
-    Build references section using full width (no two columns).
-    Each reference is a gray card with left border.
+    Build references section using full width.
+    Skip empty references and fields.
     """
+    if not references:
+        return  # skip entire section if empty
+
+    # Filter out references that have no meaningful data
+    valid_refs = []
+    for r in references:
+        if any(r.get(k) for k in ['name', 'position', 'email', 'phone']):
+            valid_refs.append(r)
+
+    if not valid_refs:
+        return
+
     # Section header
     flow.append(section_header_table("References", styles))
     flow.append(Spacer(1, 6))  # vertical space after header
 
-    for r in references:
-        card_content = [
-            Paragraph(f"<b>{r.get('name','')}</b>", styles['Small']),
-            Paragraph(r.get('position',''), styles['Small']),
-            Paragraph(r.get('email',''), styles['Small']),
-            Paragraph(r.get('phone',''), styles['Small'])
-        ]
+    for r in valid_refs:
+        card_content = []
 
-        gray = gray_card(
-            card_content,
-            bg_color=colors.HexColor("#f1f5f9"),
-            left_border=colors.HexColor("#a78bfa"),
-            card_padding=8
-        )
+        name = r.get('name', '').strip()
+        if name:
+            card_content.append(Paragraph(f"<b>{name}</b>", styles['Small']))
 
-        # Append directly to flow (full width)
-        flow.append(gray)
-        flow.append(Spacer(1, 4))  # space between references
+        position = r.get('position', '').strip()
+        if position:
+            card_content.append(Paragraph(position, styles['Small']))
+
+        email = r.get('email', '').strip()
+        if email:
+            card_content.append(Paragraph(email, styles['Small']))
+
+        phone = r.get('phone', '').strip()
+        if phone:
+            card_content.append(Paragraph(phone, styles['Small']))
+
+        if card_content:
+            gray = gray_card(
+                card_content,
+                bg_color=colors.HexColor("#f1f5f9"),
+                left_border=colors.HexColor("#a78bfa"),
+                card_padding=8
+            )
+            flow.append(KeepTogether(gray))
+            flow.append(Spacer(1, 4))  # space between references
 
 
 
@@ -519,8 +575,10 @@ def two_column_flow(left_blocks: list, right_blocks: list, col_width=240*mm/2):
 def build_achievements(flow, achievements: List[str], styles):
     from reportlab.platypus import Paragraph, Spacer, ListFlowable, ListItem
 
-    if not achievements:
-        return
+    # Filter out empty achievements
+    valid_achievements = [a.strip() for a in achievements if a and a.strip()]
+    if not valid_achievements:
+        return  # skip section if empty
 
     # Section header
     flow.append(section_header_table("Achievements", styles))
@@ -529,7 +587,7 @@ def build_achievements(flow, achievements: List[str], styles):
     # Create an unordered list of achievements
     bullets = ListFlowable(
         [ListItem(Paragraph(a, styles['Small']), bulletColor=colors.HexColor("#111827"))
-         for a in achievements],
+         for a in valid_achievements],
         bulletType='bullet',
         leftIndent=12,
         bulletFontName='Times-Roman',
@@ -540,12 +598,13 @@ def build_achievements(flow, achievements: List[str], styles):
     flow.append(
         gray_card(
             [bullets],
-            bg_color=colors.HexColor("#fef3c7"),  # light yellow card background
+            bg_color=colors.HexColor("#fef3c7"),  # light yellow background
             left_border=colors.HexColor("#f59e0b"),  # orange left border
             card_padding=6
         )
     )
     flow.append(Spacer(1, 6))
+
 
 
 def generate_cv_safe(data: Dict[str, Any], output_path: str):
@@ -570,29 +629,47 @@ def generate_cv_safe(data: Dict[str, Any], output_path: str):
     
     flow = []
 
-    # Header
-    build_header(flow, data, styles)
+    # Header (always included if name or contact exists)
+    if any([data.get("full_name"), data.get("profile_image"), data.get("phone"), data.get("email")]):
+        build_header(flow, data, styles)
 
-    # Profile, Education
-    build_profile_summary(flow, data, styles)
-    build_education(flow, data.get('educations', []), styles)
-    
-    # Languages in two columns
-    build_languages(flow, data.get('languages', []), styles)
-    
-    # Work Experience (single-column)
-    build_work_experience(flow, data.get('work_experiences', []), styles)
-    
-    # Projects (single-column)
-    build_projects(flow, data.get('projects', []), styles)
+    # Profile Summary
+    if data.get("profile_summary"):
+        build_profile_summary(flow, data, styles)
 
-    # Skills (optional two-column)
-    build_skills(flow, data, styles)
+    # Education
+    educations = data.get('educations', [])
+    if educations:
+        build_education(flow, educations, styles)
     
-    build_achievements(flow, data.get('achievements', []), styles)
-    # References (full-width)
-    build_references(flow, data.get('references', []), styles)
+    # Languages
+    languages = data.get('languages', [])
+    if languages:
+        build_languages(flow, languages, styles)
+    
+    # Work Experience
+    experiences = data.get('work_experiences', [])
+    if experiences:
+        build_work_experience(flow, experiences, styles)
+    
+    # Projects
+    projects = data.get('projects', [])
+    if projects:
+        build_projects(flow, projects, styles)
+
+    # Skills
+    if data.get('technical_skills') or data.get('soft_skills'):
+        build_skills(flow, data, styles)
+    
+    # Achievements
+    achievements = data.get('achievements', [])
+    if achievements:
+        build_achievements(flow, achievements, styles)
+
+    # References
+    references = data.get('references', [])
+    if references:
+        build_references(flow, references, styles)
 
     doc.build(flow)
     return output_path
-
