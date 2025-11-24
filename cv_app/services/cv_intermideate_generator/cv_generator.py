@@ -17,6 +17,15 @@ from PIL import Image as PILImage
 import os
 import io
 
+from datetime import datetime
+
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except Exception:
+        return datetime.min  # for missing or invalid dates
+
+# Sort experiences by start date descending (latest first)
 def create_header(data, styles, image_max_size=40*mm):
     flow = []
 
@@ -264,9 +273,22 @@ def build_profile_summary(flow, data, styles):
 
 
 def build_education(flow, educations, styles):
+    if not educations:
+        return
+
+    # Filter out completely empty entries (optional, to keep robust)
+    valid_edu = [edu for edu in educations if any(edu.get(k) for k in ['degree', 'institution', 'location', 'start_date', 'end_date', 'grade'])]
+    if not valid_edu:
+        return
+
+    # Sort by end_date descending (newest first)
+    valid_edu.sort(key=lambda e: parse_date(e.get('end_date', '') or ''), reverse=True)
+
     flow.append(section_header_table("Education", styles))
+
     left_blocks, right_blocks = [], []
-    for i, edu in enumerate(educations):
+
+    for i, edu in enumerate(valid_edu):
         card = [
             Paragraph(f"<b>{edu.get('degree','')}</b>", styles['Small']),
             Paragraph(edu.get('institution',''), styles['Small']),
@@ -275,14 +297,28 @@ def build_education(flow, educations, styles):
         ]
         gray = gray_card(card, styles)
         (left_blocks if i % 2 == 0 else right_blocks).append(gray)
+
     flow.append(two_column_grid(left_blocks, right_blocks))
     flow.append(Spacer(1, 8))
 
 
 def build_work_experience(flow, experiences, styles):
+    if not experiences:
+        return
+
+    # Filter out completely empty entries
+    valid_exp = [w for w in experiences if any(w.get(k) for k in ['job_title', 'company', 'location', 'start_date', 'end_date', 'responsibilities'])]
+    if not valid_exp:
+        return
+
+    # Sort by start_date descending (newest first)
+    valid_exp.sort(key=lambda w: parse_date(w.get('start_date', '') or ''), reverse=True)
+
     flow.append(section_header_table("Work Experience", styles))
+
     left_blocks, right_blocks = [], []
-    for i, w in enumerate(experiences):
+
+    for i, w in enumerate(valid_exp):
         card = [
             Paragraph(f"<b>{w.get('job_title','')}</b>", styles['Small']),
             Paragraph(f"<i>{w.get('company','')}</i>", styles['SmallItalic']),
@@ -294,30 +330,44 @@ def build_work_experience(flow, experiences, styles):
                 bulletType='bullet'
             )
             card.append(bullets)
+
         gray = gray_card(card, styles)
         (left_blocks if i % 2 == 0 else right_blocks).append(gray)
+
     flow.append(two_column_grid(left_blocks, right_blocks))
     flow.append(Spacer(1, 8))
 
-
 def build_projects(flow, projects, styles):
+    if not projects:
+        return
+
+    # Filter out completely empty projects
+    valid_projects = [p for p in projects if any(p.get(k) for k in ['title', 'description', 'link', 'technologies'])]
+    if not valid_projects:
+        return
+
+    # Sort by start_date or created_at descending (newest first)
+    valid_projects.sort(key=lambda p: parse_date(p.get('start_date', '') or p.get('created_at', '')), reverse=True)
+
     flow.append(section_header_table("Projects", styles))
     left_blocks, right_blocks = [], []
-    for i, p in enumerate(projects):
+
+    for i, p in enumerate(valid_projects):
         card = [
             Paragraph(f"<b>{p.get('title','')}</b>", styles['Small']),
             Paragraph(p.get('description',''), styles['Small']),
         ]
         if p.get('link'):
             card.append(Paragraph(f'<u>{p["link"]}</u>', styles['Small']))
-        techs = p.get('technologies') or []
+        techs = [t.strip() for t in (p.get('technologies') or []) if t.strip()]
         if techs:
             card.append(Paragraph("Technologies: " + ", ".join(techs), styles['Small']))
+
         gray = gray_card(card, styles)
         (left_blocks if i % 2 == 0 else right_blocks).append(gray)
+
     flow.append(two_column_grid(left_blocks, right_blocks))
     flow.append(Spacer(1, 8))
-
 
 def build_skills(flow, data, styles):
     flow.append(section_header_table("Skills", styles))
@@ -363,9 +413,21 @@ def build_languages(flow, languages, styles):
 
 
 def build_references(flow, references, styles):
+    if not references:
+        return
+
+    # Filter out empty references
+    valid_refs = [r for r in references if any(r.get(k) for k in ['name', 'position', 'email', 'phone'])]
+    if not valid_refs:
+        return
+
+    # Sort references alphabetically by name
+    valid_refs.sort(key=lambda r: (r.get('name') or "").lower())
+
     flow.append(section_header_table("References", styles))
     left_blocks, right_blocks = [], []
-    for i, r in enumerate(references):
+
+    for i, r in enumerate(valid_refs):
         card = [
             Paragraph(f"<b>{r.get('name','')}</b>", styles['Small']),
             Paragraph(r.get('position',''), styles['Small']),
@@ -374,9 +436,37 @@ def build_references(flow, references, styles):
         ]
         gray = gray_card(card, styles)
         (left_blocks if i % 2 == 0 else right_blocks).append(gray)
+
     flow.append(two_column_grid(left_blocks, right_blocks))
     flow.append(Spacer(1, 8))
 
+
+def build_certificates(flow, certificates, styles):
+    if not certificates:
+        return
+
+    # Filter out empty or invalid certificates
+    valid_certs = [c for c in certificates if any(c.get(k) for k in ['name', 'issuer', 'date'])]
+    if not valid_certs:
+        return
+
+    # Sort by date descending (newest first)
+    valid_certs.sort(key=lambda c: parse_date(c.get('date', '')), reverse=True)
+
+    flow.append(section_header_table("Certifications", styles))
+    left_blocks, right_blocks = [], []
+
+    for i, c in enumerate(valid_certs):
+        card = [
+            Paragraph(f"<b>{c.get('name','')}</b>", styles['Small']),
+            Paragraph(f"Issuer: {c.get('issuer','')}", styles['Small']),
+            Paragraph(f"Date: {c.get('date','')}", styles['Small']),
+        ]
+        gray = gray_card(card, styles)
+        (left_blocks if i % 2 == 0 else right_blocks).append(gray)
+
+    flow.append(two_column_grid(left_blocks, right_blocks))
+    flow.append(Spacer(1, 8))
 
 # ------------------------------
 #  MAIN GENERATOR FUNCTION
@@ -413,6 +503,10 @@ def generate_cv(data: Dict[str, Any], output_path: str):
     soft_skills = data.get('soft_skills', [])
     if technical_skills or soft_skills:
         build_skills(flow, data, styles)
+    # Certificates / Certifications
+    certificates = data.get('certificates', [])
+    if certificates:
+        build_certificates(flow, certificates, styles)
 
     # Languages
     languages = data.get('languages', [])

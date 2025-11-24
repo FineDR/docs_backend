@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserTB
+from api.models import UserTB
 from career_objective.models import CareerObjective
 from achivements_app.models import AchievementProfile, Achievement
 from personal_details.models import PersonalDetail
@@ -150,3 +150,8 @@ class UserCVSerializer(serializers.ModelSerializer):
             }
             for r in Reference.objects.filter(user=obj)
         ]
+
+
+class AIGenerateSerializer(serializers.Serializer):
+    section = serializers.CharField()
+    userData = serializers.DictField(child=serializers.CharField(), allow_empty=True)

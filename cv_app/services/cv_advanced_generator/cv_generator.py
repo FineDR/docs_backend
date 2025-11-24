@@ -23,6 +23,16 @@ import io
 # ------------------------------
 
 from reportlab.platypus import KeepTogether
+from datetime import datetime
+
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except Exception:
+        return datetime.min  # for missing or invalid dates
+
+# Sort experiences by start date descending (latest first)
+    valid_exp.sort(key=lambda w: parse_date(w.get('start_date') or ""), reverse=True)
 
 def create_header(data, styles, image_max_size=40*mm):
     flow = []
@@ -337,38 +347,52 @@ def build_education(flow, educations, styles):
     if not valid_edu:
         return
 
+    # --- SORT EDUCATION BY END DATE DESCENDING (newest first) ---
+    def parse_date(date_str):
+        from datetime import datetime
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except Exception:
+            return datetime.min  # fallback for missing/invalid dates
+
+    valid_edu.sort(key=lambda e: parse_date(e.get('end_date', '') or ''), reverse=True)
+
     flow.append(section_header_table("Education", styles))
     flow.append(Spacer(1, 6))
 
     for edu in valid_edu:
         card_content = []
 
-        degree = edu.get('degree', '').strip()
+        degree = (edu.get('degree') or '').strip()
         if degree:
             card_content.append(Paragraph(f"<b>{degree}</b>", styles['Small']))
 
-        institution = edu.get('institution', '').strip()
+        institution = (edu.get('institution') or '').strip()
         if institution:
             card_content.append(Paragraph(f"<i>{institution}</i>", styles['SmallItalic']))
 
-        location = edu.get('location', '').strip()
-        start = edu.get('start_date', '').strip()
-        end = edu.get('end_date', '').strip()
+        location = (edu.get('location') or '').strip()
+        start = (edu.get('start_date') or '').strip()
+        end = (edu.get('end_date') or '').strip()
         if location or start or end:
             line = f"{location}" if location else ""
             if start or end:
                 line += f"  •  {start or ''} – {end or ''}"
             card_content.append(Paragraph(line, styles['Small']))
 
-        grade = edu.get('grade', '').strip()
+        grade = (edu.get('grade') or '').strip()
         if grade:
             card_content.append(Paragraph(f"Grade: {grade}", styles['Small']))
 
         if card_content:
-            gray = gray_card(card_content, bg_color=colors.white, left_border=colors.HexColor("#60a5fa"), card_padding=8)
+            gray = gray_card(
+                card_content,
+                bg_color=colors.white,
+                left_border=colors.HexColor("#60a5fa"),
+                card_padding=8
+            )
             flow.append(gray)
             flow.append(Spacer(1, 6))
-
 
 def build_work_experience(flow, experiences, styles):
     if not experiences:
@@ -382,6 +406,15 @@ def build_work_experience(flow, experiences, styles):
 
     if not valid_exp:
         return
+
+    # --- SORT EXPERIENCES BY START DATE DESCENDING (latest first) ---
+    def parse_date(date_str):
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except Exception:
+            return datetime.min  # fallback for missing/invalid dates
+
+    valid_exp.sort(key=lambda w: parse_date(w.get('start_date') or ""), reverse=True)
 
     flow.append(section_header_table("Work Experience", styles))
     flow.append(Spacer(1, 6))
@@ -428,7 +461,6 @@ def build_work_experience(flow, experiences, styles):
             flow.append(Spacer(1,6))
 
 
-
 def build_projects(flow, projects, styles):
     if not projects:
         return
@@ -436,11 +468,20 @@ def build_projects(flow, projects, styles):
     # Filter out completely empty projects
     valid_projects = []
     for p in projects:
-        if any(p.get(k) for k in ['title', 'description', 'link', 'technologies']):
+        if any(p.get(k) for k in ['title', 'description', 'link', 'technologies', 'start_date']):
             valid_projects.append(p)
 
     if not valid_projects:
         return
+
+    # --- SORT PROJECTS BY START DATE DESCENDING (newest first) ---
+    def parse_date(date_str):
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except Exception:
+            return datetime.min  # fallback for missing/invalid dates
+
+    valid_projects.sort(key=lambda p: parse_date(p.get('start_date') or ""), reverse=True)
 
     flow.append(section_header_table("Projects", styles))
     flow.append(Spacer(1, 6))
@@ -448,15 +489,15 @@ def build_projects(flow, projects, styles):
     for p in valid_projects:
         card_content = []
 
-        title = p.get('title', '').strip()
+        title = (p.get('title') or '').strip()
         if title:
             card_content.append(Paragraph(f"<b>{title}</b>", styles['Small']))
 
-        description = p.get('description', '').strip()
+        description = (p.get('description') or '').strip()
         if description:
             card_content.append(Paragraph(description, styles['Small']))
 
-        link = p.get('link', '').strip()
+        link = (p.get('link') or '').strip()
         if link:
             card_content.append(Paragraph(f'<u>{link}</u>', styles['Small']))
 
@@ -473,7 +514,6 @@ def build_projects(flow, projects, styles):
             )
             flow.append(KeepTogether(gray))
             flow.append(Spacer(1,6))
-
 
 def build_skills(flow, data, styles):
     tech_skills = [s.strip() for s in (data.get('technical_skills') or []) if s.strip()]
@@ -523,6 +563,9 @@ def build_references(flow, references, styles):
     if not valid_refs:
         return
 
+    # --- SORT REFERENCES ALPHABETICALLY BY NAME ---
+    valid_refs.sort(key=lambda r: (r.get('name') or "").lower())
+
     # Section header
     flow.append(section_header_table("References", styles))
     flow.append(Spacer(1, 6))  # vertical space after header
@@ -530,19 +573,19 @@ def build_references(flow, references, styles):
     for r in valid_refs:
         card_content = []
 
-        name = r.get('name', '').strip()
+        name = (r.get('name') or '').strip()
         if name:
             card_content.append(Paragraph(f"<b>{name}</b>", styles['Small']))
 
-        position = r.get('position', '').strip()
+        position = (r.get('position') or '').strip()
         if position:
             card_content.append(Paragraph(position, styles['Small']))
 
-        email = r.get('email', '').strip()
+        email = (r.get('email') or '').strip()
         if email:
             card_content.append(Paragraph(email, styles['Small']))
 
-        phone = r.get('phone', '').strip()
+        phone = (r.get('phone') or '').strip()
         if phone:
             card_content.append(Paragraph(phone, styles['Small']))
 
@@ -619,6 +662,38 @@ def build_achievements(flow, achievements: List[str], styles):
     flow.append(Spacer(1, 6))
 
 
+def build_certificates(flow, certificates: List[Dict[str,str]], styles):
+    # Use 'name' instead of 'title'
+    valid_certs = [c for c in certificates if c.get('name')]
+    if not valid_certs:
+        return
+
+    flow.append(section_header_table("Certificates", styles))
+    flow.append(Spacer(1,6))
+
+    for c in valid_certs:
+        card_content = []
+        title = c.get('name','').strip()         # updated
+        issuer = c.get('issuer','').strip()
+        date = c.get('date','').strip()
+
+        if title:
+            card_content.append(Paragraph(f"<b>{title}</b>", styles['Small']))
+        if issuer:
+            card_content.append(Paragraph(f"Issuer: {issuer}", styles['SmallItalic']))
+        if date:
+            card_content.append(Paragraph(f"Date: {date}", styles['Small']))
+
+        if card_content:
+            gray = gray_card(
+                card_content,
+                bg_color=colors.HexColor("#fff7ed"),
+                left_border=colors.HexColor("#f97316"),
+                card_padding=6
+            )
+            flow.append(gray)
+            flow.append(Spacer(1,4))
+
 
 def generate_cv_safe(data: Dict[str, Any], output_path: str):
     import traceback
@@ -669,6 +744,9 @@ def generate_cv_safe(data: Dict[str, Any], output_path: str):
 
     # Projects
     safe_build(build_projects, flow, data.get('projects', []), styles)
+
+    safe_build(build_certificates, flow, data.get('certificates', []), styles)
+    print("Certificates Data:", data.get('certificates', []))
 
     # Skills
     safe_build(build_skills, flow, data, styles)

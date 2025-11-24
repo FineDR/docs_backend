@@ -52,24 +52,26 @@ class ProfileView(APIView):
             summary="Update profile with certificates",
             description="Update existing profile and certificates for the authenticated user."
         )
-        def put(self, request):
+        def put(self, request, id):
             try:
-                profile = request.user.profile
-                serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
-                if serializer.is_valid():
-                    serializer.save()  # Nested certificates handled
-                    return Response(
-                        {"message": "Profile and certificates updated successfully", "data": serializer.data},
-                        status=status.HTTP_200_OK
-                    )
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except Profile.DoesNotExist:
-                return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+                cert = Certificate.objects.get(id=id, profile=request.user.profile)
+            except Certificate.DoesNotExist:
+                return Response({"detail": "Certificate not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = CertificateSerializer(cert, data=request.data, partial=True)
+            if serializer.is_valid():
+                
+                # FIX: MANUALLY CALL THE update() METHOD
+                serializer.update(cert, serializer.validated_data)
+
+                return Response(CertificateSerializer(cert).data, status=status.HTTP_200_OK)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         @extend_schema(
-            responses={200: None},
-            summary="Delete profile and certificates",
-            description="Delete profile and all associated certificates of the authenticated user."
+                responses={200: None},
+                summary="Delete a single certificate",
+                description="Delete one certificate belonging to the authenticated user."
         )
         def delete(self, request):
             try:

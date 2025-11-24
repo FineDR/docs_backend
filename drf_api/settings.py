@@ -23,6 +23,8 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # --- Hosts ---
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api.twendedigital.tech"]
+# ALLOWED_HOSTS = ['*']
+
 # --- Frontend ---
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:5173")
 
@@ -53,7 +55,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework_simplejwt.token_blacklist",
     "whitenoise.runserver_nostatic",
-
+    "django_extensions",
     # Local apps
     "api",
     "smsparser",
@@ -67,7 +69,6 @@ INSTALLED_APPS = [
     "certificate_app",
     "references_app",
     "achivements_app",
-    "cv_payments",
     "payments",
     "jobs",
     "letterApp",

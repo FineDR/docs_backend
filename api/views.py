@@ -381,3 +381,33 @@ class GoogleAuthView(APIView):
                 {"message": f"Internal server error: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# class AIServiceFormFiller:
+#     """
+#     Service to interact with AI for form filling and data cleaning.
+#     """
+    
+#     @staticmethod
+#     def extract_relevant_data(ai_response: str) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+#         """
+#         Extract relevant JSON data from AI response.
+#         Handles cases where AI may return extra text.
+#         """
+#         import json
+#         import re
+
+#         # Use regex to find JSON objects/arrays in the response
+#         json_pattern = r'(\{.*\}|\[.*\])'
+#         matches = re.findall(json_pattern, ai_response, re.DOTALL)
+
+#         results = []
+#         for match in matches:
+#             try:
+#                 data = json.loads(match)
+#                 results.append(data)
+#             except json.JSONDecodeError:
+#                 continue
+
+   
+   

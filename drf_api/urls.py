@@ -45,11 +45,10 @@ urlpatterns = [
     path('api/', include('certificate_app.urls')),
     path('api/', include('references_app.urls')),
     path('api/', include('achivements_app.urls')),
-    path('api/', include('cv_payments.urls')),
     # project/urls.py
     path("api/", include("jobs.urls")),
     path("api/", include("letterApp.urls")),
-    path('api/', include('payments.urls')),
+    path('api/payments/', include('payments.urls')),
     path('api/', include('project_report.urls')),
     path('api/', include('cv_app.urls')),
 

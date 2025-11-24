@@ -267,3 +267,8 @@ class PasswordResetSerializer(serializers.Serializer):
         except Exception as e:
             raise serializers.ValidationError(str(e))
         return value
+
+
+class AIGenerateSerializer(serializers.Serializer):
+    section = serializers.CharField()
+    userData = serializers.DictField(child=serializers.CharField(), allow_empty=True)

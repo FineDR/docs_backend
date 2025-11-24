@@ -12,7 +12,13 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from django.conf import settings
 from reportlab.platypus import Image
 from PIL import Image as PILImage
+from datetime import datetime
 
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except Exception:
+        return datetime.min  # for missing or invalid dates
 def create_header(data, styles, image_max_size=40*mm):
     flow = []
 
@@ -294,12 +300,18 @@ def create_projects_section(projects, styles):
     if not projects:
         return flow
 
+    # Sort projects by start_date descending (newest first)
+    projects_sorted = sorted(projects, key=lambda p: parse_date(p.get('start_date', '')), reverse=True)
+
     border = Table([[Paragraph("PROJECTS", styles["SectionTitle"])]])
-    border.setStyle(TableStyle([("LINEBELOW", (0,0), (-1,-1), 1, styles.BLUE), ("BOTTOMPADDING", (0,0), (-1,-1), 4)]))
+    border.setStyle(TableStyle([
+        ("LINEBELOW", (0,0), (-1,-1), 1, styles.BLUE),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 4)
+    ]))
     flow.append(border)
     flow.append(Spacer(1, 4))
 
-    for p in projects:
+    for p in projects_sorted:
         flow.append(Paragraph(f"<b>{p.get('title','')}</b>: {p.get('description','')}", styles["MyBodyText"]))
         flow.append(Spacer(1, 2))
         if p.get("link"):
@@ -311,8 +323,9 @@ def create_projects_section(projects, styles):
 
     return flow
 
-
 # -------------------- Generate CV --------------------
+
+
 def generate_cv(data, output_path=None):
     """
     Generate CV as PDF.
@@ -331,23 +344,21 @@ def generate_cv(data, output_path=None):
 
     flow = []
     flow.extend(create_header(data, styles))
-    # flow.extend(create_section("Profile Summary", data.get("profile_summary",""), styles))
+
+    # Profile Summary
     profile_summary = data.get("profile_summary", "").strip()
     if profile_summary:
         flow.extend(create_section("Profile Summary", profile_summary, styles))
 
-
-    # flow.extend(create_section("Career Objective", data.get("career_objective",""), styles))
-    # career_objective = data.get("career_objective", "").strip()
-    # if career_objective:
-    #     flow.extend(create_section("Career Objective", career_objective, styles))
-
-    
-    # flow.extend(create_section("Education", [f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})" for e in data.get("educations", [])], styles))
-    # Education
+    # Education (sorted newest first)
+    educations = sorted(
+        data.get("educations", []),
+        key=lambda e: parse_date(e.get("start_date", "")),
+        reverse=True
+    )
     education_content = []
-    for e in data.get("educations", []):
-        line = f"{e['degree']} — {e['institution']} ({e['start_date']} to {e['end_date']})"
+    for e in educations:
+        line = f"{e.get('degree','')} — {e.get('institution','')} ({e.get('start_date','')} to {e.get('end_date','')})"
         if e.get("grade"):
             line += f", Grade: {e['grade']}"
         if e.get("location"):
@@ -356,50 +367,61 @@ def generate_cv(data, output_path=None):
     if education_content:
         flow.extend(create_section("Education", education_content, styles))
 
-    # Work Experience
+    # Work Experience (sorted newest first)
+    work_experiences = sorted(
+        data.get("work_experiences", []),
+        key=lambda w: parse_date(w.get("start_date", "")),
+        reverse=True
+    )
     work_exp_content = []
-    for w in data.get("work_experiences", []):
-        lines = [f"{w['job_title']} at {w['company']} ({w['start_date']} – {w.get('end_date','Present')})"]
+    for w in work_experiences:
+        lines = [f"{w.get('job_title','')} at {w.get('company','')} ({w.get('start_date','')} – {w.get('end_date','Present')})"]
         if w.get("responsibilities"):
             lines.extend([f"- {r}" for r in w["responsibilities"]])
         work_exp_content.append("\n".join(lines))
     if work_exp_content:
         flow.extend(create_section("Work Experience", work_exp_content, styles))
 
-
-    # flow.extend(create_projects_section(data.get("projects", []), styles))
-    projects = data.get("projects", [])
+    # Projects (sorted newest first)
+    projects = sorted(
+        data.get("projects", []),
+        key=lambda p: parse_date(p.get("start_date", "")),
+        reverse=True
+    )
     if projects:
         flow.extend(create_projects_section(projects, styles))
 
-    # flow.extend(create_skills_section(data, styles))
-    skills= data.get("technical_skills", []) + data.get("soft_skills", [])
+    # Skills
+    skills = data.get("technical_skills", []) + data.get("soft_skills", [])
     if skills:
         flow.extend(create_skills_section(data, styles))
 
-
-    # flow.extend(create_section("Achievements", data.get("achievements", []), styles))
+    # Achievements
     achievements = data.get("achievements", [])
     if achievements:
         flow.extend(create_section("Achievements", achievements, styles))
 
-    # flow.extend(create_section("Languages", [f"{l['language']} ({l['proficiency']})" for l in data.get("languages", [])], styles))
+    # Languages
     languages = data.get("languages", [])
     if languages:
         lang_content = [f"{l['language']} ({l['proficiency']})" for l in languages]
         flow.extend(create_section("Languages", lang_content, styles))
-    
 
-    # flow.extend(create_section("Certifications", [f"{c['name']} — {c['issuer']} ({c['date']})" for c in data.get("certificates", [])], styles))
-    certificates = data.get("certificates", [])
+    # Certifications (sorted newest first)
+    certificates = sorted(
+        data.get("certificates", []),
+        key=lambda c: parse_date(c.get("date", "")),
+        reverse=True
+    )
     if certificates:
-        cert_content = [f"{c['name']} — {c['issuer']} ({c['date']})" for c in certificates]
+        cert_content = [f"{c['name']} — {c['issuer']} ({c.get('date','')})" for c in certificates]
         flow.extend(create_section("Certifications", cert_content, styles))
 
-    # flow.extend(create_section("References", [f"{r['name']} — {r['position']} ({r['email']}, {r['phone']})" for r in data.get("references", [])], styles))
+    # References (optional: you could sort by name if needed, usually no dates)
     references = data.get("references", [])
     if references:
-        ref_content = [f"{r['name']} — {r['position']} ({r['email']}, {r['phone']})" for r in references]
+        ref_content = [f"{r.get('name','')} — {r.get('position','')} ({r.get('email','')}, {r.get('phone','')})" for r in references]
         flow.extend(create_section("References", ref_content, styles))
+
     doc.build(flow)
     print("✅ CV generated successfully")
