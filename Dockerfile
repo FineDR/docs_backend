@@ -55,7 +55,7 @@ EXPOSE 8000
 # Use entrypoint script to wait for DB, apply migrations, and start Gunicorn
 COPY ./entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
+#this is the code to use docker
 ENTRYPOINT ["/app/entrypoint.sh"]
 RUN chmod +x /app/entrypoint.sh
 
