@@ -37,11 +37,22 @@ class UserCVDetailsView(APIView):
 
         # ----- BASIC PERSONAL DETAILS -----
         personal = data.get("personal_details", {}) or {}
+
+# Build full_name from personal_details
         full_name = title_case(" ".join(filter(None, [
-            data.get("first_name"),
-            data.get("middle_name"),
-            data.get("last_name")
+            personal.get("first_name", ""),
+            personal.get("middle_name", ""),
+            personal.get("last_name", "")
         ])))
+
+        # Fallback to top-level fields if personal_details is missing
+        if not full_name.strip():
+            full_name = title_case(" ".join(filter(None, [
+                data.get("first_name", ""),
+                data.get("middle_name", ""),
+                data.get("last_name", "")
+            ])))
+
 
         # Format phone
         phone = personal.get("phone", "")
@@ -138,9 +149,9 @@ class UserCVDetailsView(APIView):
         return {
             "id": data.get("id"),
             "full_name": full_name,
-            "first_name": title_case(data.get("first_name", "")),
-            "middle_name": title_case(data.get("middle_name", "")),
-            "last_name": title_case(data.get("last_name", "")),
+            "first_name": title_case(personal.get("first_name", "")),
+            "middle_name": title_case(personal.get("middle_name", "")),
+            "last_name": title_case(personal.get("last_name", "")),
             "email": data.get("email", ""),
             "phone": phone,
             "address": personal.get("address", ""),
@@ -195,8 +206,11 @@ class UserCVDetailsView(APIView):
 
 SECTION_FORMATS = {
     "personal_information": {
-        "array_field": "personal_information",
+    "array_field": "personal_information",
         "template": {
+            "first_name": "",
+            "middle_name": "",
+            "last_name": "",
             "phone": "",
             "address": "",
             "linkedin": "",
@@ -207,6 +221,7 @@ SECTION_FORMATS = {
             "profile_summary": ""
         }
     },
+
     "work_experience": {
         "array_field": "experiences",
         "template": {
