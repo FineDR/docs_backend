@@ -16,6 +16,7 @@ from cv_app.services.cv_advanced_generator.cv_generator import generate_cv_safe 
 import logging
 logger = logging.getLogger(__name__)  
 import io,os
+from django.http import FileResponse
 OPENROUTER_URL = getattr(
     settings,
     "OPENROUTER_URL",
@@ -175,30 +176,33 @@ class UserCVDetailsView(APIView):
         }
 
     def get(self, request, cv_type="basic"):
-        """Return JSON or generate PDF CV."""
+        """Return JSON or stream PDF CV."""
         try:
             user = request.user
             user_data = self.get_user_cv_data(user)
 
-            # --- If JSON view requested ---
+            # --- JSON response ---
             if request.query_params.get("format") == "json":
                 return Response(user_data, status=status.HTTP_200_OK)
 
-            # --- Otherwise, generate PDF ---
-            buffer = io.BytesIO()
+            # --- Generate PDF into temp file ---
+            import tempfile
+            temp_file = tempfile.NamedTemporaryFile(delete=True)
             if cv_type.lower() == "basic":
-                generate_cv_basic(user_data, buffer)
+                generate_cv_basic(user_data, temp_file)
             elif cv_type.lower() == "intermediate":
-                generate_cv_intermediate(user_data, output_path=buffer)
+                generate_cv_intermediate(user_data, output_path=temp_file)
             elif cv_type.lower() == "advanced":
-                generate_cv_advanced(user_data, output_path=buffer)
+                generate_cv_advanced(user_data, output_path=temp_file)
             else:
                 return Response({"detail": "Invalid CV type."}, status=status.HTTP_400_BAD_REQUEST)
 
-            buffer.seek(0)
-            response = HttpResponse(buffer, content_type="application/pdf")
-            response["Content-Disposition"] = f'attachment; filename="{user.first_name}_{user.last_name}_CV.pdf"'
-            return response
+            temp_file.seek(0)
+            return FileResponse(
+                temp_file,
+                as_attachment=True,
+                filename=f"{user.first_name}_{user.last_name}_CV.pdf",
+            )
 
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
